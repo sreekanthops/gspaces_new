@@ -1,4 +1,6 @@
+
 <svg width="400" height="50" viewBox="0 0 400 50" xmlns="http://www.w3.org/2000/svg">
+
     <!-- Import Google Fonts -->
     <defs>
         <style type="text/css">
@@ -34,7 +36,8 @@
     </svg>
     <!-- Main text -->
     <text x="51" y="34" font-family="Playfair Display, serif" font-size="36" font-weight="700" letter-spacing="0.5px" fill="url(#logoGradient)">
-        gspaces
+        Gspaces
     </text>
 </svg>
+
 
