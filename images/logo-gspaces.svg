@@ -2,42 +2,39 @@
     <!-- Import Google Fonts -->
     <defs>
         <style type="text/css">
-            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&amp;family=Inter:wght@400;500&amp;display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&amp;family=Inter:wght@400;500&amp;family=Playfair+Display:wght@500;700&amp;display=swap');
         </style>
         <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" /> <!-- Changed from #2C3E50 to White -->
-            <stop offset="100%" style="stop-color:#00EEFF;stop-opacity:1" /> <!-- Changed from #3498DB to bright Cyan -->
+            <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00EEFF;stop-opacity:1" />
         </linearGradient>
     </defs>
-    <!-- Desk Icon - Colors adjusted for better visibility -->
+    <!-- Desk Icon -->
     <svg x="0" y="0" viewBox="0 0 512 512" width="50" height="50" style="enable-background:new 0 0 512 512;">
-        <polygon style="fill:#ADD8E6;" points="304.743,434.253 391.285,434.253 382.623,344.73 325.89,323.583 "/> <!-- Lighter Blue -->
-        <polygon style="fill:#E0FFFF;" points="325.89,323.219 269.156,344.366 260.494,433.891 325.89,433.891 "/> <!-- Lighter Cyan -->
-        <path style="fill:#ADD8E6;" d="M494.759,61.885H325.89l-31.72,251.565L512,281.73V79.125C512,69.604,504.281,61.885,494.759,61.885z"/> <!-- Lighter Blue -->
-        <path style="fill:#E0FFFF;" d="M325.89,61.885H157.02c-9.521,0-17.241,7.719-17.241,17.241V281.73l186.111,31.72V61.885z"/> <!-- Lighter Cyan -->
-        <polygon style="fill:#1E90FF;" points="325.89,418.393 304.743,433.89 325.89,450.113 431.862,450.113 431.862,418.393 "/> <!-- Dodger Blue -->
-        <rect x="219.916" y="418.388" style="fill:#4169E1;" width="105.977" height="31.72"/> <!-- Royal Blue -->
-        <path style="fill:#1E90FF;" d="M325.89,281.729l-21.147,31.72l21.147,30.917h168.87c9.521,0,17.241-7.719,17.241-17.241v-45.396H325.89z"/> <!-- Dodger Blue -->
-        <path style="fill:#4169E1;" d="M325.89,281.729H139.779v45.396c0,9.521,7.719,17.241,17.241,17.241h168.87V281.729z"/> <!-- Royal Blue -->
-        <polygon style="fill:#1E90FF;" points="85.316,412.809 0,279.455 75.473,160.903 102.231,177.939 37.63,279.413 122.972,412.809 "/> <!-- Dodger Blue -->
-        <path style="fill:#FF4500;" d="M147.624,404.262H92.332l-21.147,22.926l21.147,22.926h76.48V425.45C168.811,413.747,159.326,404.262,147.624,404.262z"/> <!-- Orange Red -->
+        <polygon style="fill:#ADD8E6;" points="304.743,434.253 391.285,434.253 382.623,344.73 325.89,323.583 "/>
+        <polygon style="fill:#E0FFFF;" points="325.89,323.219 269.156,344.366 260.494,433.891 325.89,433.891 "/>
+        <path style="fill:#ADD8E6;" d="M494.759,61.885H325.89l-31.72,251.565L512,281.73V79.125C512,69.604,504.281,61.885,494.759,61.885z"/>
+        <path style="fill:#E0FFFF;" d="M325.89,61.885H157.02c-9.521,0-17.241,7.719-17.241,17.241V281.73l186.111,31.72V61.885z"/>
+        <polygon style="fill:#1E90FF;" points="325.89,418.393 304.743,433.89 325.89,450.113 431.862,450.113 431.862,418.393 "/>
+        <rect x="219.916" y="418.388" style="fill:#4169E1;" width="105.977" height="31.72"/>
+        <path style="fill:#1E90FF;" d="M325.89,281.729l-21.147,31.72l21.147,30.917h168.87c9.521,0,17.241-7.719,17.241-17.241v-45.396H325.89z"/>
+        <path style="fill:#4169E1;" d="M325.89,281.729H139.779v45.396c0,9.521,7.719,17.241,17.241,17.241h168.87V281.729z"/>
+        <polygon style="fill:#1E90FF;" points="85.316,412.809 0,279.455 75.473,160.903 102.231,177.939 37.63,279.413 122.972,412.809 "/>
+        <path style="fill:#FF4500;" d="M147.624,404.262H92.332l-21.147,22.926l21.147,22.926h76.48V425.45C168.811,413.747,159.326,404.262,147.624,404.262z"/>
         <g>
-            <path style="fill:#FFA07A;" d="M92.332,404.262H37.039c-11.702,0-21.187,9.485-21.187,21.187v24.665h76.48V404.262z"/> <!-- Light Salmon -->
-            <polygon style="fill:#FFA07A;" points="113.506,209.957 142.092,181.371 74.677,113.955 56.185,132.447 	"/> <!-- Light Salmon -->
+            <path style="fill:#FFA07A;" d="M92.332,404.262H37.039c-11.702,0-21.187,9.485-21.187,21.187v24.665h76.48V404.262z"/>
+            <polygon style="fill:#FFA07A;" points="113.506,209.957 142.092,181.371 74.677,113.955 56.185,132.447        "/>
         </g>
-        <rect x="67.568" y="127.726" transform="matrix(-0.7071 0.7071 -0.7071 -0.7071 261.6901 242.3948)" style="fill:#FFD700;" width="26.151" height="95.339"/> <!-- Gold -->
+        <rect x="67.568" y="127.726" transform="matrix(-0.7071 0.7071 -0.7071 -0.7071 261.6901 242.3948)" style="fill:#FFD700;" width="26.151" height="95.339"/>
         <g>
-            <path style="fill:#FF4500;" d="M153.395,229.656l53.26-53.26l-2.266-2.267c-29.415-29.414-77.105-29.414-106.519,0l0,0l0,0l16.732,46.969L153.395,229.656z"/> <!-- Orange Red -->
-            <path style="fill:#FF4500;" d="M97.329,174.698c-0.724,0.739-1.444,1.481-2.132,2.243C95.896,176.186,96.603,175.436,97.329,174.698z"/> <!-- Orange Red -->
+            <path style="fill:#FF4500;" d="M153.395,229.656l53.26-53.26l-2.266-2.267c-29.415-29.414-77.105-29.414-106.519,0l0,0l0,0l16.732,46.969L153.395,229.656z"/>
+            <path style="fill:#FF4500;" d="M97.329,174.698c-0.724,0.739-1.444,1.481-2.132,2.243C95.896,176.186,96.603,175.436,97.329,174.698z"/>
         </g>
-        <path style="fill:#FFA07A;" d="M97.869,174.13L97.869,174.13c-29.415,29.415-29.415,77.105,0,106.519l2.267,2.267l53.26-53.26L97.869,174.13z"/> <!-- Light Salmon -->
+        <path style="fill:#FFA07A;" d="M97.869,174.13L97.869,174.13c-29.415,29.415-29.415,77.105,0,106.519l2.267,2.267l53.26-53.26L97.869,174.13z"/>
     </svg>
     <!-- Main text -->
-    <text x="51" y="34" font-family="Montserrat, sans-serif" font-size="32" font-weight="600" letter-spacing="-0.5px" fill="url(#logoGradient)">
+    <text x="51" y="34" font-family="Playfair Display, serif" font-size="36" font-weight="700" letter-spacing="0.5px" fill="url(#logoGradient)">
         gspaces
     </text>
-    <!-- .in text -->
-    <text x="175" y="34" font-family="Inter, sans-serif" font-size="22" font-weight="500" fill="url(#logoGradient)">
-        .in
-    </text>
 </svg>
+
