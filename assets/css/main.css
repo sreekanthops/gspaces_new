@@ -230,14 +230,15 @@ h6 {
   z-index: 997;
 }
 
-.header .logo {
-  line-height: 1;
+@media (max-width: 768px) {
+  .header .logo img,
+  .footer .footer-about .logo img {
+    max-width: 100%;
+    height: auto;
+    max-height: none !important; /* ✅ Overrides fixed height */
+  }
 }
 
-.header .logo img {
-  max-height: 36px;
-  margin-right: 8px;
-}
 
 .header .logo h1 {
   font-size: 30px;
@@ -267,7 +268,9 @@ h6 {
 
 @media (max-width: 1200px) {
   .header .logo {
-    order: 1;
+    display: flex;
+    align-items: center;
+    max-width: 100%;
   }
   .header .cta-btn {
     order: 2;
@@ -870,7 +873,30 @@ section,
     font-size: 24px;
   }
 }
+@media screen and (max-width: 768px) {
+  .section-title h2 {
+    font-size: 20px; /* reduce font size on smaller screens */
+    line-height: 1.4; /* add spacing between lines */
+    word-break: break-word; /* avoid text overflow */
+  }
+  .section-title p {
+    font-size: 16px;
+  }
+}
 
+/* Mobile responsiveness fix */
+@media screen and (max-width: 768px) {
+  .section-title h2 {
+    font-size: 20px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .section-title p {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+}
 /*--------------------------------------------------------------
 # Hero Section
 --------------------------------------------------------------*/
