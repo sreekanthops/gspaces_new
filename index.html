@@ -994,17 +994,30 @@
       </div>
 
       <!-- Newsletter -->
-    <!-- Newsletter Subscription (No PHP Needed) -->
-    <form action="https://formsubmit.co/sreekanth.chityala@gspaces.in" method="POST">
-      <input type="email" name="email" placeholder="Your Email" required>
-      
-      <!-- Optional Hidden Inputs -->
-      <input type="hidden" name="_captcha" value="false">
-      <input type="hidden" name="_subject" value="New GSpaces Subscriber!">
-      <input type="hidden" name="_next" value="https://yourdomain.com/thank-you.html">
-      
-      <input type="submit" value="Subscribe">
-    </form>
+
+      <div class="col-lg-6 col-md-12 footer-newsletter">
+
+        <h4>Stay in the Loop</h4>
+
+        <p>Subscribe to get updates on new setups, rental offers, and workspace tips!</p>
+
+        <form action="forms/newsletter.php" method="post" class="php-email-form">
+
+          <div class="newsletter-form">
+
+            <input type="email" name="email" placeholder="Your Email"><input type="submit" value="Subscribe">
+
+          </div>
+
+          <div class="loading">Loading</div>
+
+          <div class="error-message"></div>
+
+          <div class="sent-message">Thank you! You’ve subscribed successfully.</div>
+
+        </form>
+
+      </div>
 
     </div>
 
