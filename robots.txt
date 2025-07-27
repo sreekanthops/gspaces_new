@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /sicbo/
+Disallow: /craps/
+Disallow: /uono-board-poker*
+Disallow: /game-big-poker*
+Disallow: /*.shtml$
+Disallow: /*.html$
