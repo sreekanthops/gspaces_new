@@ -1,3 +1,16 @@
+/**
+* Template Name: Dewi
+* Template URL: https://bootstrapmade.com/dewi-free-multi-purpose-html-template/
+* Updated: Aug 07 2024 with Bootstrap v5.3.3
+* Author: BootstrapMade.com
+* License: https://bootstrapmade.com/license/
+*/
+
+/*--------------------------------------------------------------
+# Font & Color Variables
+# Help: https://bootstrapmade.com/color-system/
+--------------------------------------------------------------*/
+
 /* Fonts */
 :root {
   --default-font: "Orbitron", system-ui, -apple-system, "Orbitron", Roboto, "Orbitron";
@@ -222,7 +235,8 @@ h6 {
 
 /* Global Header on Scroll */
 .scrolled .header {
-  --background-color: rgba(21, 34, 43, 0.85); /* Semi-transparent dark background on scroll */
+  /* ADJUSTED: Reduced opacity to make it lighter */
+  --background-color: rgba(21, 34, 43, 0.7); /* Changed from 0.85 to 0.7 */
   box-shadow: 0px 0 18px rgba(0, 0, 0, 0.1);
 }
 
@@ -964,7 +978,8 @@ section,
 
 .hero:before {
   content: "";
-  background: color-mix(in srgb, var(--background-color), transparent 30%);
+  /* ADJUSTED: Changed transparent percentage to lighten the overlay */
+  background: color-mix(in srgb, var(--background-color), transparent 60%); /* Changed from 30% to 60% */
   position: absolute;
   inset: 0;
   z-index: 2;
