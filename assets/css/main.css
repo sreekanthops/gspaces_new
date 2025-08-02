@@ -214,7 +214,6 @@ h6 {
     opacity: 0;
   }
 }
-
 /*--------------------------------------------------------------
 # Global Header
 --------------------------------------------------------------*/
@@ -232,14 +231,11 @@ h6 {
   left: 0;
   right: 0;
 }
-
 /* Global Header on Scroll */
 .scrolled .header {
-  /* ADJUSTED: Reduced opacity to make it lighter */
-  --background-color: rgba(21, 34, 43, 0.7); /* Changed from 0.85 to 0.7 */
+  --background-color: rgba(21, 34, 43, 0.7); /* Adjusted opacity */
   box-shadow: 0px 0 18px rgba(0, 0, 0, 0.1);
 }
-
 /*--------------------------------------------------------------
 # Logo
 --------------------------------------------------------------*/
@@ -247,20 +243,17 @@ h6 {
   line-height: 1;
   z-index: 1001; /* Ensure logo is always on top, especially in mobile view */
 }
-
 .header .logo img {
   width: auto;
   /* Fluid, clamped logo height. Adjust min/max/vw values as needed */
   max-height: clamp(40px, 10vw, 80px);
 }
-
 .header .logo h1 {
   font-size: 30px;
   margin: 0;
   font-weight: 700;
   color: var(--heading-color);
 }
-
 /*--------------------------------------------------------------
 # Call-to-Action Button
 --------------------------------------------------------------*/
@@ -275,14 +268,12 @@ h6 {
   text-transform: uppercase;
   border: 2px solid var(--contrast-color);
 }
-
 .header .cta-btn:hover,
 .header .cta-btn:focus:hover {
   color: var(--contrast-color);
   background: var(--accent-color);
   border-color: var(--accent-color);
 }
-
 /*--------------------------------------------------------------
 # Desktop Navigation
 --------------------------------------------------------------*/
@@ -292,17 +283,14 @@ h6 {
     align-items: center;
     max-width: 100%;
   }
-
   .header .cta-btn {
     order: 2; /* Keep CTA button next to nav on desktop */
     margin: 0 15px 0 0;
     padding: 6px 15px;
   }
-
   .header .navmenu {
     order: 3; /* Keep nav on right side of header */
   }
-
   /* Navigation Menu specific styling for desktop */
   .navmenu {
     --nav-color: #e5eaee;
@@ -311,7 +299,6 @@ h6 {
     --nav-dropdown-color: #444444;
     --nav-dropdown-hover-color: #ff4a17;
   }
-
   .navmenu ul {
     display: flex;
     align-items: center;
@@ -319,13 +306,11 @@ h6 {
     padding: 0;
     margin: 0;
   }
-
   .navmenu > ul > li {
     position: relative;
     white-space: nowrap;
     padding: 8px 12px; /* Reduced vertical padding for nav items */
   }
-
   .navmenu a,
   .navmenu a:focus {
     display: flex;
@@ -340,14 +325,12 @@ h6 {
     transition: 0.3s;
     position: relative;
   }
-
   .navmenu a i,
   .navmenu a:focus i {
     font-size: 12px;
     line-height: 0;
     margin-left: 5px;
   }
-
   .navmenu > ul > li > a:before {
     content: "";
     position: absolute;
@@ -359,20 +342,17 @@ h6 {
     visibility: hidden;
     transition: all 0.3s ease-in-out 0s;
   }
-
   .navmenu a:hover:before,
   .navmenu .active:before,
   .navmenu li:hover > a:before {
     width: 100%;
     visibility: visible;
   }
-
   .navmenu a:hover,
   .navmenu .active,
   .navmenu li:hover > a {
     color: var(--nav-hover-color);
   }
-
   /* Dropdowns for Desktop */
   .navmenu .dropdown ul {
     position: absolute;
@@ -389,90 +369,76 @@ h6 {
     transition: 0.3s;
     border-radius: 4px;
   }
-
   .navmenu .dropdown ul li {
     min-width: 200px;
   }
-
   .navmenu .dropdown ul a {
     padding: 10px 20px;
     font-size: 15px;
     text-transform: none;
     color: var(--nav-dropdown-color);
   }
-
   .navmenu .dropdown ul a i {
     font-size: 12px;
   }
-
   .navmenu .dropdown ul a:hover,
   .navmenu .dropdown ul .active > a,
   .navmenu .dropdown ul li:hover > a {
     color: var(--nav-dropdown-hover-color);
   }
-
   .navmenu .dropdown:hover > ul {
     opacity: 1;
     visibility: visible;
     top: 100%; /* Ensure it drops directly below */
   }
-
   .navmenu .dropdown .dropdown ul {
     top: 0;
     left: 100%; /* Nested dropdowns appear to the right */
   }
-
   .navmenu .dropdown .dropdown:hover > ul {
     top: 0;
     left: 100%;
   }
 }
-
 /*--------------------------------------------------------------
 # Mobile Navigation
 --------------------------------------------------------------*/
-
 /* Remove the hamburger icon completely */
 .mobile-nav-toggle {
   display: none !important; /* Forces the hamburger to be hidden always */
 }
-
 @media (max-width: 991px) { /* Mobile styles for screens 991px and narrower */
   .header {
     display: flex;
     flex-wrap: nowrap; /* Keep items on one line */
     align-items: center;
-    justify-content: flex-start; /* ADJUSTED: Align items to the start */
-    padding: 10px 15px;
+    justify-content: flex-start; /* Still aligned to the start */
+    padding: 5px 5px; /* ADJUSTED: Further reduced header padding */
     height: auto;
     overflow-x: auto; /* Allow horizontal scrolling if menu is too wide */
     -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
   }
-
   .header .logo {
-    order: 1; /* Keep logo first */
-    flex-shrink: 0; /* Don't let logo shrink */
-    max-width: 20%; /* Keep logo small */
-    margin-right: 5px; /* ADJUSTED: Added small margin to separate from menu */
+    order: 1;
+    flex-shrink: 0;
+    max-width: 15%; /* ADJUSTED: Even smaller max-width for logo */
+    margin-right: 2px; /* ADJUSTED: Reduced margin beside logo even more */
   }
   .header .logo img {
     width: 100%;
     height: auto;
   }
-
-
   .header .cta-btn {
     order: 3;
     flex-basis: auto;
     text-align: right;
-    margin-left: 5px !important; /* Adjusted margin to push it further right */
-    padding: 3px 6px;
+    margin-left: 2px !important; /* ADJUSTED: Reduced margin for CTA even more */
+    padding: 1px 4px; /* ADJUSTED: Smaller padding for mobile CTA */
     white-space: nowrap;
-    font-size: 10px;
+    font-size: 8px; /* ADJUSTED: Even smaller font for CTA */
   }
-
   .navmenu {
-    order: 2; /* Position menu between logo and CTA */
+    order: 2;
     width: auto;
     display: flex;
     flex-direction: row;
@@ -485,12 +451,10 @@ h6 {
     z-index: auto;
     box-shadow: none;
     transition: none;
-    flex-grow: 1; /* Allow nav menu to take up available space */
-    /* Removed justify-content: flex-end; as it's now handled by header's justify-content and margins */
+    flex-grow: 1;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-
   .navmenu ul {
     display: flex;
     flex-direction: row;
@@ -504,68 +468,59 @@ h6 {
     overflow-y: visible;
     box-shadow: none;
   }
-
   .navmenu > ul > li {
-    padding: 2px 4px; /* Even further reduced padding */
+    padding: 0px 2px; /* ADJUSTED: Reduced padding for mobile list items to absolute minimum */
     width: auto;
     text-align: center;
     flex-shrink: 0;
     white-space: nowrap;
   }
-
   .navmenu a,
   .navmenu a:focus {
-    padding: 2px 4px; /* Even further reduced link padding */
-    color: var(--default-color); /* Ensure good contrast on mobile */
-    font-size: 11px; /* Even smaller font size for mobile nav links */
+    padding: 0px 2px; /* ADJUSTED: Reduced link padding to absolute minimum */
+    color: var(--default-color);
+    font-size: 9px; /* ADJUSTED: Even smaller font size for mobile nav links */
     text-transform: capitalize;
     display: block;
   }
-
   .navmenu a:hover,
   .navmenu .active,
   .navmenu li:hover > a {
     color: var(--nav-hover-color);
   }
-
   /* Adjust dropdowns for always-visible mobile menu in a row */
   .navmenu .dropdown ul {
-    position: absolute; /* Use absolute position for nested items */
-    top: 100%; /* Position below parent */
+    position: absolute;
+    top: 100%;
     left: 0;
     display: flex;
-    flex-direction: column; /* Nested dropdown items still stack vertically */
-    background: var(--nav-dropdown-background-color); /* Give dropdown a background */
+    flex-direction: column;
+    background: var(--nav-dropdown-background-color);
     box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-    padding: 5px 0;
+    padding: 3px 0; /* ADJUSTED: Reduced padding */
     margin: 0;
-    min-width: 100px;
+    min-width: 80px; /* ADJUSTED: Reduced min-width */
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
   }
-
   .navmenu .dropdown:hover > ul {
     opacity: 1;
     visibility: visible;
   }
-
   .navmenu .dropdown ul li {
     width: 100%;
-    text-align: left; /* Align dropdown items left */
+    text-align: left;
   }
-
   .navmenu .dropdown ul a {
-    padding: 5px 10px;
-    font-size: 12px;
+    padding: 3px 6px; /* ADJUSTED: Reduced padding for nested dropdown links */
+    font-size: 10px; /* ADJUSTED: Reduced font size */
   }
-
   /* Remove all mobile-nav-active specific rules as they are no longer needed */
   .mobile-nav-active .navmenu {
     right: auto;
   }
 }
-
 /* Ensure footer logo is also responsive */
 .footer .footer-about .logo img {
   max-width: 100%;
