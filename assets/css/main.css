@@ -742,6 +742,7 @@ h6 {
 # Preloader
 --------------------------------------------------------------*/
 #preloader {
+  display: none;
   position: fixed;
   inset: 0;
   z-index: 999999;
