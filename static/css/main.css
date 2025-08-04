@@ -1396,9 +1396,7 @@ colors
 /*--------------------------------------------------------------
 # Portfolio Section
 --------------------------------------------------------------*/
-/*--------------------------------------------------------------
-# Portfolio Section - FULL RESTORED VERSION
---------------------------------------------------------------*/
+
 .portfolio .portfolio-filters {
   padding: 0;
   margin: 0 auto 20px auto;
@@ -1446,8 +1444,13 @@ colors
   transition: transform 0.3s ease;
 }
 
+.portfolio-content img {
+  border-bottom: 1px solid #eee;
+  transition: transform 0.3s ease;
+}
+
 .portfolio .portfolio-content:hover img {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 .portfolio .portfolio-info {
@@ -1497,6 +1500,38 @@ colors
 
 .portfolio .preview-link:hover {
   color: var(--accent-color);
+}
+
+.product-meta {
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+#portfolio-flters {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#portfolio-flters li {
+  cursor: pointer;
+  margin: 0 15px;
+  font-weight: 500;
+  color: #444;
+  transition: all 0.3s;
+}
+
+#portfolio-flters li.filter-active {
+  color: #ff4500;
+  font-weight: bold;
+  border-bottom: 2px solid #ff4500;
 }
 
 /*--------------------------------------------------------------

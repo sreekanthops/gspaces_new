@@ -515,27 +515,65 @@
       </div>
 
     </section><!-- /Testimonials Section -->
-
-<!-- Products Section -->
+ 
 <section id="portfolio" class="portfolio section">
-  <div class="container" data-aos="fade-up">
-    <div class="row">
-      {% for product in products %}
-      <div class="col-lg-4 col-md-6 d-flex align-items-stretch mb-4">
-        <div class="portfolio-content">
-          <img src="{{ url_for('static', filename=product.image_url) }}" class="img-fluid" alt="{{ product.name }}">
-          <div class="portfolio-info">
-            <h4>{{ product.name }}</h4>
-            <p>{{ product.description }}</p>
-            <p><strong>₹ {{ product.price }}</strong></p>
+
+  <!-- Section Title -->
+  <div class="container section-title" data-aos="fade-up">
+    <h2>Our Desk Setups</h2>
+    <p>Discover Your Ideal Workspace with GSpaces</p>
+  </div><!-- End Section Title -->
+
+  <div class="container">
+
+    <div class="isotope-layout" data-default-filter="*" data-layout="masonry" data-sort="original-order">
+
+      <ul class="portfolio-filters isotope-filters" data-aos="fade-up" data-aos-delay="100">
+        <li data-filter="*" class="filter-active">All</li>
+        <li data-filter=".filter-ergonomic">Ergonomic</li>
+        <li data-filter=".filter-minimalist">Minimalist</li>
+        <li data-filter=".filter-executive">Executive</li>
+        <li data-filter=".filter-complete">Serenity</li>
+      </ul><!-- End Product Filters -->
+
+      <div class="row gy-4 isotope-container" data-aos="fade-up" data-aos-delay="200">
+
+        {% for product in products %}
+        <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-{{ product.category | lower }}">
+          
+          <!-- Image block -->
+          <div class="portfolio-content">
+            <img src="{{ url_for('static', filename=product.image_url) }}" class="img-fluid" alt="{{ product.name }}">
           </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
+
+          <!-- Text block below image -->
+          <div class="product-meta text-center mt-3">
+            <h5 class="fw-bold mb-1">{{ product.name }}</h5>
+            
+            {% if product.description %}
+            <p class="text-muted small mb-2">{{ product.description }}</p>
+            {% endif %}
+            
+            <p class="text-warning mb-1">
+              {% for i in range(5) %}
+              <i class="bi bi-star-fill"></i>
+              {% endfor %}
+            </p>
+            
+            <p class="text-dark fw-semibold mb-1">₹ {{ product.price }}</p>
+            <p class="text-secondary small">Category: {{ product.category }}</p>
+          </div>
+
+        </div><!-- End Product Item -->
+        {% endfor %}
+
+      </div><!-- End Row -->
+
+    </div><!-- End Isotope -->
+
+  </div><!-- End Container -->
+
 </section>
-<!-- END Products Section -->
 
         <!-- Team Section -->
 
