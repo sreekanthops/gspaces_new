@@ -515,7 +515,67 @@
       </div>
 
     </section><!-- /Testimonials Section -->
- 
+
+<!-- Add Product Button -->
+<div class="text-end me-4 mb-4">
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+    <i class="bi bi-plus-circle"></i> Add Product
+  </button>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" action="/add_product" enctype="multipart/form-data" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="name" class="form-label">Product Name</label>
+          <input type="text" class="form-control" name="name" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="category" class="form-label">Category</label>
+          <select name="category" class="form-select" required>
+            <option value="Executive">Executive</option>
+            <option value="Ergonomic">Ergonomic</option>
+            <option value="Minimalist">Minimalist</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="rating" class="form-label">Rating (1-5)</label>
+          <input type="number" class="form-control" name="rating" min="1" max="5" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="price" class="form-label">Price (₹)</label>
+          <input type="number" class="form-control" name="price" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="description" class="form-label">Description</label>
+          <textarea class="form-control" name="description" rows="2"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="image" class="form-label">Upload Image</label>
+          <input type="file" class="form-control" name="image" accept="image/*" required>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success">Add Product</button>
+      </div>
+    </form>
+  </div>
+</div>
+   
+<!-- Start products section -->
 <section id="portfolio" class="portfolio section">
 
   <!-- Section Title -->
@@ -533,7 +593,6 @@
         <li data-filter=".filter-ergonomic">Ergonomic</li>
         <li data-filter=".filter-minimalist">Minimalist</li>
         <li data-filter=".filter-executive">Executive</li>
-        <li data-filter=".filter-complete">Serenity</li>
       </ul><!-- End Product Filters -->
 
       <div class="row gy-4 isotope-container" data-aos="fade-up" data-aos-delay="200">
@@ -560,7 +619,7 @@
               {% endfor %}
             </p>
             
-            <p class="text-dark fw-semibold mb-1">₹ {{ product.price }}</p>
+            <p class="text-dark fw-semibold mb-1">₹ {{ product.price | inr }}</p>
             <p class="text-secondary small">Category: {{ product.category }}</p>
           </div>
 
@@ -574,7 +633,7 @@
   </div><!-- End Container -->
 
 </section>
-
+<!-- End products section -->
         <!-- Team Section -->
 
     <section id="team" class="team section light-background">
@@ -784,20 +843,21 @@
 
         <p>Subscribe to get updates on new setups, rental offers, and workspace tips!</p>
 
-        <form action="forms/newsletter.php" method="post" class="php-email-form">
+        <form action="https://formsubmit.co/sreekanth.chityala@gspaces.in" method="POST" class="php-email-form">
+          <!-- FormSubmit hidden options -->
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_subject" value="New Newsletter Subscription!">
 
           <div class="newsletter-form">
-
-            <input type="email" name="email" placeholder="Your Email"><input type="submit" value="Subscribe">
-
+            <input type="email" name="email" placeholder="Your Email" required>
+            <input type="submit" value="Subscribe">
           </div>
 
+          <!-- Optional messages -->
           <div class="loading">Loading</div>
-
           <div class="error-message"></div>
-
           <div class="sent-message">Thank you! You’ve subscribed successfully.</div>
-
         </form>
 
       </div>
@@ -842,5 +902,4 @@
 </body>
 
 </html>
-
 
