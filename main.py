@@ -3,9 +3,16 @@ import psycopg2
 from psycopg2 import Error
 from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
+from flask import session 
+from flask import session, render_template_string
+from flask import flash, get_flashed_messages
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'supersecretkey'  # Needed for flash messages
+# Hardcoded user credentials
+VALID_USERS = {
+    "sreekanth": "gspaces2025"
+}
 
 # Upload folder setup
 UPLOAD_FOLDER = os.path.join('static', 'img', 'Products')
@@ -61,9 +68,19 @@ def create_products_table(conn):
     except Error as e:
         print(f"Error creating table: {e}")
 
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
 @app.route('/')
 def index():
     conn = connect_to_db()
+    user = session.get('user')  # <-- Add this line
+
     if conn:
         try:
             cursor = conn.cursor()
@@ -80,7 +97,7 @@ def index():
                     'rating': float(row[5]) if row[5] else None,
                     'image_url': row[6]
                 })
-            return render_template('index.html', products=product_list)
+            return render_template('index.html', products=product_list, user=session.get('user'))  # Pass user
         except Error as e:
             print(f"Error fetching products: {e}")
             return "Error fetching products", 500
@@ -88,7 +105,82 @@ def index():
             conn.close()
     return "Error connecting to database", 500
 
-@app.route('/add', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        conn = connect_to_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email = %s AND password = %s", (email, password))
+        user = cur.fetchone()
+
+        if user:
+            session['user'] = user[1]  # Assuming user[1] is 'name'
+            return redirect('/')
+        else:
+            flash("Invalid username or password", "error")
+            return redirect(url_for('login'))
+    
+    # This part handles GET request - show login form
+    return render_template('login.html')
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    try:
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        conn = connect_to_db()
+        if conn:
+            cursor = conn.cursor()
+            # Check if email already exists
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            if cursor.fetchone():
+                flash("Email already registered.", "error")
+                return redirect(url_for('login'))
+
+            # Insert into users
+            cursor.execute("""
+                INSERT INTO users (name, email, password)
+                VALUES (%s, %s, %s)
+            """, (name, email, password))
+            conn.commit()
+            flash("Signup successful. Please log in.", "success")
+            return redirect(url_for('login'))
+        else:
+            flash("Database connection failed.", "error")
+            return redirect(url_for('login'))
+    except Exception as e:
+        print(f"❌ Signup error: {e}")
+        flash("Signup failed due to a server error.", "error")
+        return redirect(url_for('login'))
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('index'))
+
+@app.route('/delete_product/<int:product_id>', methods=['POST'])
+def delete_product(product_id):
+    conn = connect_to_db()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+            conn.commit()
+            flash("Product deleted successfully!")
+        except Error as e:
+            print(f"Error deleting product: {e}")
+            return "Error deleting product", 500
+        finally:
+            conn.close()
+        return redirect(url_for('index'))
+    return "Database connection failed", 500
+
+@app.route('/add_product', methods=['GET', 'POST'])
 def add_product():
     if request.method == 'POST':
         name = request.form['name']
