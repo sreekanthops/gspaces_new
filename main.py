@@ -163,6 +163,89 @@ def logout():
     session.pop('user', None)
     return redirect(url_for('index'))
 
+@app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
+def edit_product(product_id):
+    if session.get('user') != 'sreekanth':
+        flash("Unauthorized access.")
+        return redirect(url_for('index'))
+
+    conn = connect_to_db()
+    if not conn:
+        flash("Database connection failed.")
+        return redirect(url_for('index'))
+
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+        category = request.form['category']
+        price = request.form['price']
+        rating = request.form['rating']
+
+        # Handle image upload
+        image_file = request.files.get('image')
+        image_url = None
+
+        if image_file and image_file.filename:
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(image_path)
+            image_url = f'img/Products/{filename}'
+
+        try:
+            if image_url:
+                cursor.execute("""
+                    UPDATE products
+                    SET name = %s, description = %s, category = %s, price = %s, rating = %s, image_url = %s
+                    WHERE id = %s
+                """, (name, description, category, price, rating, image_url, product_id))
+            else:
+                cursor.execute("""
+                    UPDATE products
+                    SET name = %s, description = %s, category = %s, price = %s, rating = %s
+                    WHERE id = %s
+                """, (name, description, category, price, rating, product_id))
+
+            conn.commit()
+            flash("Product updated successfully!")
+            return redirect(url_for('index'))
+        except Exception as e:
+            print(f"❌ Update error: {e}")
+            flash("Error updating product.")
+            return redirect(url_for('index'))
+        finally:
+            cursor.close()
+            conn.close()
+
+    # GET request: Fetch product details
+    try:
+        cursor.execute("SELECT id, name, description, category, price, rating, image_url FROM products WHERE id = %s", (product_id,))
+        row = cursor.fetchone()
+        if not row:
+            flash("Product not found.")
+            return redirect(url_for('index'))
+
+        product = {
+            'id': row[0],
+            'name': row[1],
+            'description': row[2],
+            'category': row[3],
+            'price': float(row[4]),
+            'rating': float(row[5]) if row[5] else None,
+            'image_url': row[6]
+        }
+
+        return render_template('edit_product.html', product=product)
+
+    except Exception as e:
+        print(f"❌ Fetch error: {e}")
+        flash("Error fetching product.")
+        return redirect(url_for('index'))
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.route('/delete_product/<int:product_id>', methods=['POST'])
 def delete_product(product_id):
     conn = connect_to_db()
