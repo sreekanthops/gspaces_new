@@ -35,11 +35,21 @@
 
   <!-- Main CSS File -->
   <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
-
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body class="index-page">
-
+  <!-- ✅ Profile Section -->
+  {% if user %}
+    <div style="position: absolute; top: 20px; right: 30px; z-index: 1000;" class="d-flex align-items-center gap-3">
+      <span class="fw-semibold text-dark">Welcome, {{ user }}</span>
+      <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
+    </div>
+  {% else %}
+    <div style="position: absolute; top: 20px; right: 30px; z-index: 1000;" class="d-flex align-items-center gap-3">
+      <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary">Login</a>
+    </div>
+  {% endif %}
   <header id="header" class="header d-flex align-items-center fixed-top">
 
     <div class="container-fluid container-xl position-relative d-flex align-items-center">
@@ -74,6 +84,17 @@
   </header>
 
   <main class="main">
+<!-- Top-right Profile Section -->
+{% if user %}
+  <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
+    <span class="fw-semibold text-dark">Welcome, {{ user }}</span>
+    <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
+  </div>
+{% else %}
+  <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
+    <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary">Login</a>
+  </div>
+{% endif %}
 
 <section id="hero" class="hero section dark-background" style="position: relative; overflow: hidden; height: 100vh;">
     <!-- Image Background -->
@@ -516,12 +537,13 @@
     </section><!-- /Testimonials Section -->
 
 <!-- Add Product Button -->
+{% if user == 'sreekanth' %}
 <div class="text-end me-4 mb-4">
   <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
     <i class="bi bi-plus-circle"></i> Add Product
   </button>
 </div>
-
+{% endif %}
 <!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -582,54 +604,63 @@
     <h2>Our Desk Setups</h2>
     <p>Discover Your Ideal Workspace with GSpaces</p>
   </div><!-- End Section Title -->
+<div class="container">
 
-  <div class="container">
+  <div class="isotope-layout" data-default-filter="*" data-layout="masonry" data-sort="original-order">
 
-    <div class="isotope-layout" data-default-filter="*" data-layout="masonry" data-sort="original-order">
+    <!-- Filters -->
+    <ul class="portfolio-filters isotope-filters" data-aos="fade-up" data-aos-delay="100">
+      <li data-filter="*" class="filter-active">All</li>
+      <li data-filter=".filter-ergonomic">Ergonomic</li>
+      <li data-filter=".filter-minimalist">Minimalist</li>
+      <li data-filter=".filter-executive">Executive</li>
+    </ul><!-- End Product Filters -->
 
-      <ul class="portfolio-filters isotope-filters" data-aos="fade-up" data-aos-delay="100">
-        <li data-filter="*" class="filter-active">All</li>
-        <li data-filter=".filter-ergonomic">Ergonomic</li>
-        <li data-filter=".filter-minimalist">Minimalist</li>
-        <li data-filter=".filter-executive">Executive</li>
-      </ul><!-- End Product Filters -->
+    <div class="row gy-4 isotope-container" data-aos="fade-up" data-aos-delay="200">
 
-      <div class="row gy-4 isotope-container" data-aos="fade-up" data-aos-delay="200">
+      {% for product in products %}
+      <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-{{ product.category | lower }}">
+        
+        <!-- Image block -->
+        <div class="portfolio-content">
+          <img src="{{ url_for('static', filename=product.image_url) }}" class="img-fluid" alt="{{ product.name }}">
+        </div>
 
-        {% for product in products %}
-        <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-{{ product.category | lower }}">
-          
-          <!-- Image block -->
-          <div class="portfolio-content">
-            <img src="{{ url_for('static', filename=product.image_url) }}" class="img-fluid" alt="{{ product.name }}">
-          </div>
+        <!-- Text block below image -->
+        <div class="product-meta text-center mt-3">
+          <h5 class="fw-bold mb-1">{{ product.name }}</h5>
 
-          <!-- Text block below image -->
-          <div class="product-meta text-center mt-3">
-            <h5 class="fw-bold mb-1">{{ product.name }}</h5>
-            
-            {% if product.description %}
-            <p class="text-muted small mb-2">{{ product.description }}</p>
-            {% endif %}
-            
-            <p class="text-warning mb-1">
-              {% for i in range(5) %}
+          {% if product.description %}
+          <p class="text-muted small mb-2">{{ product.description }}</p>
+          {% endif %}
+
+          <p class="text-warning mb-1">
+            {% for i in range(product.rating|int) %}
               <i class="bi bi-star-fill"></i>
-              {% endfor %}
-            </p>
-            
-            <p class="text-dark fw-semibold mb-1">₹ {{ product.price | inr }}</p>
-            <p class="text-secondary small">Category: {{ product.category }}</p>
-          </div>
+            {% endfor %}
+          </p>
 
-        </div><!-- End Product Item -->
-        {% endfor %}
+          <p class="text-dark fw-semibold mb-1">₹ {{ product.price | inr }}</p>
+          <p class="text-secondary small">Category: {{ product.category }}</p>
 
-      </div><!-- End Row -->
+          <!-- Delete Button -->
+          {% if user == 'sreekanth' %}
+          <form action="/delete_product/{{ product.id }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this product?');" class="d-inline">
+            <button type="submit" class="btn btn-outline-danger btn-sm mt-2">
+              <i class="bi bi-trash"></i> Delete
+            </button>
+          </form>
+          {% endif %}
+        </div>
 
-    </div><!-- End Isotope -->
+      </div><!-- End Product Item -->
+      {% endfor %}
 
-  </div><!-- End Container -->
+    </div><!-- End Row -->
+
+  </div><!-- End Isotope -->
+
+</div><!-- End Container -->
 
 </section>
 <!-- End products section -->
@@ -839,20 +870,37 @@
       <h4>Stay in the Loop</h4>
       <p>Subscribe to get updates on new setups, rental offers, and workspace tips!</p>
 
-      <form action="https://formsubmit.co/sreekanth.chityala@gspaces.in" method="POST">
-        
-        <!-- Optional settings -->
-        <input type="hidden" name="_captcha" value="false">
-        <input type="hidden" name="_next" value="https://gspaces.in/static/thank-you.html">
-
-
-        <!-- Form fields -->
-        <div class="newsletter-form">
-          <input type="email" name="email" placeholder="Your Email" required>
-          <input type="submit" value="Subscribe">
-        </div>
-        
+      <form id="subscribeForm">
+        <input type="email" name="email" placeholder="Your Email" required>
+        <button type="submit">Subscribe</button>
       </form>
+
+      <div id="responseMessage" style="margin-top:10px;"></div>
+
+      <script>
+        document.getElementById("subscribeForm").addEventListener("submit", function(e) {
+          e.preventDefault(); // Prevent full page reload
+
+          const formData = new FormData(this);
+
+          fetch("https://formsubmit.co/ajax/sreekanth.chityala@gspaces.in", {
+            method: "POST",
+            headers: { 'Accept': 'application/json' },
+            body: formData
+          })
+          .then(response => {
+            if (response.ok) {
+              document.getElementById("responseMessage").innerText = "✅ Thank you for subscribing!";
+            } else {
+              document.getElementById("responseMessage").innerText = "❌ There was an error. Try again later.";
+            }
+          })
+          .catch(error => {
+            document.getElementById("responseMessage").innerText = "❌ Network error. Try again.";
+          });
+        });
+      </script>
+
     </div>
 
   <!-- Footer Bottom -->
@@ -891,4 +939,3 @@
 </body>
 
 </html>
-
