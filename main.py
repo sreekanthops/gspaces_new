@@ -262,42 +262,40 @@ def delete_product(product_id):
             conn.close()
         return redirect(url_for('index'))
     return "Database connection failed", 500
-
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():
+    if 'user' not in session or session['user'] != 'sreekanth':
+        return redirect(url_for('login'))
+
     if request.method == 'POST':
-        name = request.form['name']
-        category = request.form['category']
-        price = request.form['price']
-        rating = request.form['rating']
-        description = request.form['description']
-        image = request.files['image']
+        try:
+            name = request.form['name']
+            category = request.form['category']
+            rating = request.form['rating']
+            price = request.form['price']
+            description = request.form['description']
+            photo = request.files['photo']
+            filename = None
 
-        image_url = ''
-        if image and image.filename:
-            filename = secure_filename(image.filename)
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            image.save(image_path)
-            image_url = f'img/Products/{filename}'
+            if photo:
+                filename = secure_filename(photo.filename)
+                photo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        conn = connect_to_db()
-        if conn:
-            try:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO products (name, description, category, price, rating, image_url)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (name, description, category, price, rating, image_url))
-                conn.commit()
-                flash("Product added successfully!")
-                return redirect(url_for('index'))
-            except Error as e:
-                print(f"Error inserting product: {e}")
-                return "Error inserting product", 500
-            finally:
-                conn.close()
-        return "Database connection failed", 500
+            conn = connect_to_db()
+            cur = conn.cursor()
+            cur.execute('''
+                INSERT INTO products (name, category, rating, price, description, image_url, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (name, category, rating, price, description, filename, session['user']))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return redirect(url_for('index'))
+        except Exception as e:
+            return f"Error inserting product: {e}", 500
+
     return render_template('add_product.html')
+
 
 if __name__ == '__main__':
     conn = connect_to_db()
