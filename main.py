@@ -60,7 +60,8 @@ def create_products_table(conn):
                 category VARCHAR(100),
                 price DECIMAL(10, 2),
                 rating DECIMAL(2, 1),
-                image_url VARCHAR(255)
+                image_url VARCHAR(255),
+                created_by VARCHAR(255) -- ADDED THIS LINE
             );
         """)
         conn.commit()
@@ -110,21 +111,20 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-
         conn = connect_to_db()
         cur = conn.cursor()
+        # You should probably hash passwords in a real application
         cur.execute("SELECT * FROM users WHERE email = %s AND password = %s", (email, password))
         user = cur.fetchone()
-
         if user:
-            session['user'] = user[1]  # Assuming user[1] is 'name'
+            session['user'] = user[1]  # Assuming user[1] is 'name' (e.g., 'sri')
+            flash(f"Welcome, {session['user']}!", "success") # Added flash message
             return redirect('/')
         else:
-            flash("Invalid username or password", "error")
-            return redirect(url_for('login'))
-    
-    # This part handles GET request - show login form
-    return render_template('login.html')
+            flash("Invalid email or password", "error")
+            return render_template('login.html', show_login_form=True) # To show form for re-entry
+    return render_template('login.html') # For GET request
+
 
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -264,36 +264,67 @@ def delete_product(product_id):
     return "Database connection failed", 500
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():
-    if 'user' not in session or session['user'] != 'sreekanth':
-        return redirect(url_for('login'))
-
+    # --- Authorization Check ---
+    # Change 'sreekanth' to 'sri' to allow the 'sri' user to add products
+    if 'user' not in session or session['user'] != 'sri':
+        flash("Unauthorized access. Only 'sri' can add products.", "warning") # Added flash
+        return redirect(url_for('login')) # Redirect to login or index
     if request.method == 'POST':
         try:
             name = request.form['name']
             category = request.form['category']
+            # Ensure these map correctly to your HTML form's name attributes
             rating = request.form['rating']
             price = request.form['price']
             description = request.form['description']
-            photo = request.files['photo']
+            
+            # --- Image Handling ---
+            # Corrected from 'photo' to 'image' to match your add_product.html
+            image_file = request.files['image'] 
             filename = None
-
-            if photo:
-                filename = secure_filename(photo.filename)
-                photo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
+            image_url = None
+            if image_file and image_file.filename:
+                filename = secure_filename(image_file.filename)
+                # Ensure UPLOAD_FOLDER is correctly configured (it is in your code)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image_file.save(file_path)
+                image_url = f'img/Products/{filename}' # Path relative to static
             conn = connect_to_db()
+            if not conn:
+                flash("Database connection failed during product addition.", "error")
+                return redirect(url_for('add_product')) # Stay on add product page with error
             cur = conn.cursor()
+            
+            # --- Database Insertion ---
+            # Ensure 'created_by' column exists in your products table schema!
             cur.execute('''
                 INSERT INTO products (name, category, rating, price, description, image_url, created_by)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ''', (name, category, rating, price, description, filename, session['user']))
+            ''', (name, category, float(rating), float(price), description, image_url, session['user']))
+            
             conn.commit()
             cur.close()
             conn.close()
-            return redirect(url_for('index'))
-        except Exception as e:
-            return f"Error inserting product: {e}", 500
-
+            
+            flash("Product added successfully!", "success") # Added success flash
+            return redirect(url_for('index')) # Redirect to index on success
+        except KeyError as e: # Catch missing form fields
+            print(f"❌ Form field missing: {e}")
+            flash(f"Missing form data: {e}. Please ensure all fields are filled.", "error")
+            return render_template('add_product.html')
+        except ValueError as e: # Catch conversion errors (e.g., non-numeric price)
+            print(f"❌ Data conversion error: {e}")
+            flash(f"Error in data format: {e}. Please check price and rating.", "error")
+            return render_template('add_product.html')
+        except Error as e: # Catch PostgreSQL errors
+            print(f"❌ Database error during product insertion: {e}")
+            flash(f"Database error: Could not add product. {e}", "error") # Show specific error for debugging
+            return render_template('add_product.html')
+        except Exception as e: # Catch any other unexpected errors
+            print(f"❌ Unexpected error during product addition: {e}")
+            flash(f"An unexpected error occurred: {e}", "error")
+            return render_template('add_product.html')
+    # For GET request (display the form)
     return render_template('add_product.html')
 
 
