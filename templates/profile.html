@@ -1,0 +1,224 @@
+<!-- templates/profile.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - GSpaces</title>
+    <!-- Include your Google Fonts link here (same as index.html) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Orbitron:wght@400..900&family=Playfair+Display:wght@500;700&family=Raleway:wght@100..900&family=Roboto:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Your Custom CSS -->
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <style>
+        /* Specific styles for profile page layout */
+        .profile-container {
+            margin-top: 100px; /* Adjust based on your fixed header height */
+            padding: 30px 0;
+        }
+        .profile-sidebar {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,.05);
+            min-height: 400px; /* Ensure sidebar has some height */
+        }
+        .profile-sidebar .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .profile-sidebar .nav-link.active,
+        .profile-sidebar .nav-link:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .profile-content-frame {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,.05);
+        }
+        .order-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fff;
+        }
+        .order-card .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #e9ecef;
+            padding-bottom: 10px;
+        }
+        .order-card .order-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .order-card .order-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+        .order-card .order-total {
+            text-align: right;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include your custom-navbar here if you want it on the profile page -->
+    {% include 'navbar.html' %} <!-- Assuming your navbar HTML is in a separate file for reusability -->
+
+    <div class="container profile-container">
+        <h1 class="mb-4">Welcome, {{ user }}!</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert-container mb-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <!-- Left Sidebar Navigation -->
+            <div class="col-md-3">
+                <div class="profile-sidebar">
+                    <div class="list-group list-group-flush">
+                        <a href="#personal-details" class="list-group-item list-group-item-action active" data-bs-toggle="list" role="tab">Personal Details</a>
+                        <a href="#password-change" class="list-group-item list-group-item-action" data-bs-toggle="list" role="tab">Change Password</a>
+                        <a href="#my-orders" class="list-group-item list-group-item-action" data-bs-toggle="list" role="tab">My Orders</a>
+                        <!-- Add more sections as needed -->
+                        <a href="#" class="list-group-item list-group-item-action disabled">Payment Methods (Coming Soon)</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Content Frame -->
+            <div class="col-md-9">
+                <div class="profile-content-frame tab-content">
+                    <!-- Personal Details Section -->
+                    <div class="tab-pane fade show active" id="personal-details" role="tabpanel">
+                        <h3>Personal Details</h3>
+                        <form action="{{ url_for('update_profile') }}" method="POST">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ user_details.name }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email address</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ user_details.email }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Address</label>
+                                <textarea class="form-control" id="address" name="address" rows="3">{{ user_details.address if user_details.address != 'Not provided' else '' }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" value="{{ user_details.phone if user_details.phone != 'Not provided' else '' }}">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Update Profile</button>
+                        </form>
+                    </div>
+
+                    <!-- Change Password Section -->
+                    <div class="tab-pane fade" id="password-change" role="tabpanel">
+                        <h3>Change Password</h3>
+                        <form action="{{ url_for('change_password') }}" method="POST">
+                            <div class="mb-3">
+                                <label for="current_password" class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="current_password" name="current_password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Change Password</button>
+                        </form>
+                    </div>
+
+                    <!-- My Orders Section -->
+                    <div class="tab-pane fade" id="my-orders" role="tabpanel">
+                        <h3>My Orders</h3>
+                        {% if user_orders %}
+                            {% for order in user_orders %}
+                                <div class="order-card">
+                                    <div class="order-header">
+                                        <div>
+                                            <strong>Order #{{ order.id }}</strong><br>
+                                            <small>Date: {{ order.order_date }}</small>
+                                        </div>
+                                        <span class="badge {% if order.status == 'Completed' %}bg-success{% elif order.status == 'Shipped' %}bg-info{% elif order.status == 'Pending' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ order.status }}
+                                        </span>
+                                    </div>
+                                    <div class="order-items">
+                                        {% for item in order.items %}
+                                            <div class="order-item">
+                                                <img src="{{ url_for('static', filename=item.image_url) if item.image_url else url_for('static', filename='img/placeholder.jpg') }}" alt="{{ item.product_name }}">
+                                                <div>
+                                                    {{ item.product_name }} (x{{ item.quantity }})<br>
+                                                    <small>Price: ₹{{ item.price_at_purchase|inr }} each</small>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="order-total">
+                                        Total: ₹{{ order.total_amount|inr }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>You have no previous orders.</p>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper (JS for tabs) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // JavaScript to handle active tab on page load (if refreshed on a specific tab)
+        document.addEventListener('DOMContentLoaded', function() {
+            const hash = window.location.hash;
+            if (hash) {
+                const triggerEl = document.querySelector(`.profile-sidebar .list-group-item[href="${hash}"]`);
+                if (triggerEl) {
+                    new bootstrap.Tab(triggerEl).show();
+                }
+            }
+
+            // Update URL hash when a tab is clicked
+            document.querySelectorAll('.profile-sidebar .list-group-item').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    history.pushState(null, null, this.getAttribute('href'));
+                });
+            });
+        });
+    </script>
+</body>
+</html>
