@@ -1,0 +1,89 @@
+<!-- templates/navbar.html -->
+
+		<!-- Start Header/Navigation -->
+		<nav class="custom-navbar navbar navbar navbar-expand-md navbar-dark bg-dark " arial-label="Furni navigation bar">
+
+			<div class="container">
+				<a class="navbar-brand" href="index.html">Furni<span>.</span></a>
+
+				<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsFurni" aria-controls="navbarsFurni" aria-expanded="false" aria-label="Toggle navigation">
+					<span class="navbar-toggler-icon"></span>
+				</button>
+
+				<div class="collapse navbar-collapse" id="navbarsFurni">
+					<ul class="custom-navbar-nav navbar-nav ms-auto mb-2 mb-md-0">
+						<li class="nav-item active">
+							<a class="nav-link" href="index.html">Home</a>
+						</li>
+						<li><a class="nav-link" href="shop.html">Shop</a></li>
+						<li><a class="nav-link" href="about.html">About us</a></li>
+						<li><a class="nav-link" href="services.html">Services</a></li>
+						<li><a class="nav-link" href="blog.html">Blog</a></li>
+						<li><a class="nav-link" href="contact.html">Contact us</a></li>
+					</ul>
+
+          <!-- And for the top-right profile section, adjust its links as well -->
+          {% if session['user_name'] %} {# Use session['user_name'] now #}
+            <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
+              <span class="fw-semibold text-dark">Welcome, {{ session['user_name'] }}</span>
+              <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
+            </div>
+          {% else %}
+            <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
+              <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary">Login</a>
+            </div>
+          {% endif %}
+				</div>
+			</div>	
+		</nav>
+<nav class="custom-navbar navbar navbar navbar-expand-md navbar-dark bg-dark" aria-label="GSpaces Navigation Bar">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+            <img src="{{ url_for('static', filename='img/logo-gspaces.svg') }}" alt="GSPACES-LOGO" style="height: 40px; width: auto;">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsFurni" aria-controls="navbarsFurni" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarsFurni">
+            <ul class="custom-navbar-nav navbar-nav ms-auto mb-2 mb-md-0">
+                <li class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <a class="nav-link" href="{{ url_for('index') }}#hero">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#about">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#services">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#portfolio">Products</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#team">Team</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#contact">Contact</a>
+                </li>
+            </ul>
+            <!-- In your templates/navbar.html -->
+            <ul class="custom-navbar-cta navbar-nav mb-2 mb-md-0 ms-5">
+                <li><a class="nav-link" href="{{ url_for('cart') if has_cart else '#' }}"><img src="{{ url_for('static', filename='img/cart.svg') }}"></a></li>
+                <li><a class="nav-link" href="{{ url_for('profile') }}"><img src="{{ url_for('static', filename='img/user.svg') }}"></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Top-right Profile Section (If kept fixed on every page) -->
+{% if session['user_name'] %}
+  <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
+    <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
+  </div>
+{% else %}
+  <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
+    <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary">Login</a>
+  </div>
+{% endif %}
+
+<!-- mobile-nav-toggle (if you still need to hide it visually) -->
+<i class="mobile-nav-toggle"></i>
