@@ -2,12 +2,13 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.17 (Homebrew)
--- Dumped by pg_dump version 14.18 (Homebrew)
+-- Dumped from database version 17.5
+-- Dumped by pg_dump version 17.5
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -48,7 +49,7 @@ CREATE SEQUENCE public.order_items_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.order_items_id_seq OWNER TO sri;
+ALTER SEQUENCE public.order_items_id_seq OWNER TO sri;
 
 --
 -- Name: order_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: sri
@@ -85,7 +86,7 @@ CREATE SEQUENCE public.orders_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.orders_id_seq OWNER TO sri;
+ALTER SEQUENCE public.orders_id_seq OWNER TO sri;
 
 --
 -- Name: orders_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: sri
@@ -125,13 +126,53 @@ CREATE SEQUENCE public.products_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.products_id_seq OWNER TO sri;
+ALTER SEQUENCE public.products_id_seq OWNER TO sri;
 
 --
 -- Name: products_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: sri
 --
 
 ALTER SEQUENCE public.products_id_seq OWNED BY public.products.id;
+
+
+--
+-- Name: reviews; Type: TABLE; Schema: public; Owner: sri
+--
+
+CREATE TABLE public.reviews (
+    id integer NOT NULL,
+    product_id integer NOT NULL,
+    user_id integer,
+    username character varying(255) NOT NULL,
+    rating integer,
+    comment text NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT reviews_rating_check CHECK (((rating >= 1) AND (rating <= 5)))
+);
+
+
+ALTER TABLE public.reviews OWNER TO sri;
+
+--
+-- Name: reviews_id_seq; Type: SEQUENCE; Schema: public; Owner: sri
+--
+
+CREATE SEQUENCE public.reviews_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.reviews_id_seq OWNER TO sri;
+
+--
+-- Name: reviews_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: sri
+--
+
+ALTER SEQUENCE public.reviews_id_seq OWNED BY public.reviews.id;
 
 
 --
@@ -163,7 +204,7 @@ CREATE SEQUENCE public.users_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.users_id_seq OWNER TO sri;
+ALTER SEQUENCE public.users_id_seq OWNER TO sri;
 
 --
 -- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: sri
@@ -194,6 +235,13 @@ ALTER TABLE ONLY public.products ALTER COLUMN id SET DEFAULT nextval('public.pro
 
 
 --
+-- Name: reviews id; Type: DEFAULT; Schema: public; Owner: sri
+--
+
+ALTER TABLE ONLY public.reviews ALTER COLUMN id SET DEFAULT nextval('public.reviews_id_seq'::regclass);
+
+
+--
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: sri
 --
 
@@ -221,9 +269,15 @@ COPY public.orders (id, user_id, order_date, total_amount, status) FROM stdin;
 --
 
 COPY public.products (id, name, description, category, price, rating, image_url, created_by) FROM stdin;
-1       test    test    Executive       55000   4       img/Products/a8c4d5fa26c3b2b1418f0a9965d26ff0.jpg       \N
-2       test    test    Executive       44.0    4.0     img/Products/f996ebea3a130d8dd1bb5b2f1f938455.jpg       sri
-3       hello   hello   Executive       4.0     4.0     img/Products/8ba4393a5606b577180ac03daa4fa3a3.jpg       sri
+5	test	test	Executive	55.0	4.0	img/Products/f996ebea3a130d8dd1bb5b2f1f938455.jpg	sri
+\.
+
+
+--
+-- Data for Name: reviews; Type: TABLE DATA; Schema: public; Owner: sri
+--
+
+COPY public.reviews (id, product_id, user_id, username, rating, comment, created_at) FROM stdin;
 \.
 
 
@@ -232,7 +286,7 @@ COPY public.products (id, name, description, category, price, rating, image_url,
 --
 
 COPY public.users (id, name, email, password, address, phone) FROM stdin;
-8       sri     sri@gmail.com   sri     \N      \N
+9	sri	sri@gmail.com	sri	\N	\N
 \.
 
 
@@ -254,14 +308,21 @@ SELECT pg_catalog.setval('public.orders_id_seq', 1, false);
 -- Name: products_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
 --
 
-SELECT pg_catalog.setval('public.products_id_seq', 4, true);
+SELECT pg_catalog.setval('public.products_id_seq', 5, true);
+
+
+--
+-- Name: reviews_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
+--
+
+SELECT pg_catalog.setval('public.reviews_id_seq', 1, false);
 
 
 --
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 8, true);
+SELECT pg_catalog.setval('public.users_id_seq', 9, true);
 
 
 --
@@ -286,6 +347,14 @@ ALTER TABLE ONLY public.orders
 
 ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: reviews reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: sri
+--
+
+ALTER TABLE ONLY public.reviews
+    ADD CONSTRAINT reviews_pkey PRIMARY KEY (id);
 
 
 --
@@ -329,4 +398,21 @@ ALTER TABLE ONLY public.orders
 
 
 --
+-- Name: reviews reviews_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: sri
+--
+
+ALTER TABLE ONLY public.reviews
+    ADD CONSTRAINT reviews_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;
+
+
+--
+-- Name: reviews reviews_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: sri
+--
+
+ALTER TABLE ONLY public.reviews
+    ADD CONSTRAINT reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
 -- PostgreSQL database dump complete
+--
