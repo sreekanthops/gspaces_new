@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2 import Error
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
+from flask import jsonify # Add this import at the top
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'supersecretkey'  # Needed for flash messages
@@ -108,7 +109,7 @@ def login():
                 session['user'] = user_record[0]  # user_record[0] is the name
 
                 # Admin check based on name (username)
-                session['is_admin'] = (user_record[0] == 'sreekanth' or user_record[0] == 'sri')
+                session['is_admin'] = (user_record[0] == 'sri')
 
                 flash(f"Welcome, {session['user']}!", "success")
                 return redirect('/')
@@ -446,37 +447,73 @@ def change_password():
             cur.close()
             conn.close()
 
-@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
+@app.route('/add_product', methods=['GET', 'POST'])
+def add_product():
+    if not session.get('is_admin'):
+        if request.accept_mimetypes.accept_json:
+            return jsonify({'success': False, 'message': 'Unauthorized access. Only administrators can add products.'}), 403
+        else:
+            flash("Unauthorized access. Only administrators can add products.", "warning")
+            return redirect(url_for('login'))
+    if request.method == 'POST':
+        try:
+            name = request.form['name']
+            category = request.form['category']
+            rating = request.form['rating']
+            price = request.form['price']
+            description = request.form['description']
+            image_file = request.files.get('image')
+            filename = None
+            image_url = None
+            if image_file and image_file.filename:
+                filename = secure_filename(image_file.filename)
+                # Define a subdirectory for product images, if desired
+                product_image_dir = os.path.join(app.config['UPLOAD_FOLDER'])
+                os.makedirs(product_image_dir, exist_ok=True) # Ensure directory exists
+                file_path = os.path.join(product_image_dir, filename)
+                image_file.save(file_path)
+                print(f"DEBUG: Image saved to: {file_path}")
+                # Store the relative path from static, or full URL if served differently
+                image_url = f'img/Products/{filename}' # Correct relative path for static files
+            conn = connect_to_db()
+            if not conn:
+                return jsonify({'success': False, 'message': 'Database connection failed during product addition.'}), 500
+            cur = conn.cursor()
+            cur.execute('''
+                INSERT INTO products (name, category, rating, price, description, image_url, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (name, category, float(rating), float(price), description, image_url, session.get('user', 'unknown')))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return jsonify({'success': True, 'message': 'Product added successfully!'})
+        except KeyError as e:
+            return jsonify({'success': False, 'message': f'Missing form data: {e}. Please ensure all fields are filled.'}), 400
+        except ValueError as e:
+            return jsonify({'success': False, 'message': f'Error in data format: {e}. Please check price and rating.'}), 400
+        except Error as e:
+            print(f"❌ Database error during product insertion: {e}")
+            return jsonify({'success': False, 'message': f'Database error: Could not add product. {e}'}), 500
+    else:
+        return render_template('add_product.html')
+@app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
 def add_to_cart(product_id):
-    # This is a placeholder for your add to cart logic
-    # You would typically:
-    # 1. Check if the user is logged in
-    # 2. Get the product details using product_id from the database
-    # 3. Add the product to the user's session cart or database cart
-    # 4. Flash a message to the user
-    # 5. Redirect back to the index page or to the cart page
-
     if 'user' not in session:
         flash("Please log in to add items to your cart.", "warning")
         return redirect(url_for('login'))
-
     conn = connect_to_db()
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT name, price FROM products WHERE id = %s", (product_id,))
+            # Crucially, fetch the image_url here too!
+            cursor.execute("SELECT name, price, image_url FROM products WHERE id = %s", (product_id,))
             product = cursor.fetchone()
             if product:
                 product_name = product[0]
                 product_price = float(product[1])
-
-                # --- Basic Cart Logic (using session) ---
-                # This is a simplified example. For a robust cart, consider
-                # storing item quantity, ensuring unique items, etc.
+                product_image_url = product[2] # Fetch the image_url
                 if 'cart' not in session:
                     session['cart'] = []
-                
-                # Check if product is already in cart to update quantity or add new
                 found = False
                 for item in session['cart']:
                     if item['id'] == product_id:
@@ -488,10 +525,10 @@ def add_to_cart(product_id):
                         'id': product_id,
                         'name': product_name,
                         'price': product_price,
-                        'quantity': 1
+                        'quantity': 1,
+                        'image_url': product_image_url # Store image_url in session
                     })
-                session.modified = True # Important: tell Flask session has been modified
-
+                session.modified = True
                 flash(f"{product_name} added to cart!", "success")
             else:
                 flash("Product not found.", "error")
@@ -502,70 +539,25 @@ def add_to_cart(product_id):
             conn.close()
     else:
         flash("Database connection failed, cannot add to cart.", "error")
-
-    return redirect(url_for('index')) # Redirect back to the main product list or cart page
-
-@app.route('/add_product', methods=['GET', 'POST'])
-def add_product():
-    # Authorization Check - now uses session.get('is_admin')
-    if not session.get('is_admin'):
-        flash("Unauthorized access. Only administrators can add products.", "warning")
-        return redirect(url_for('login')) # Redirect to login or index
-
-    if request.method == 'POST':
-        try:
-            name = request.form['name']
-            category = request.form['category']
-            rating = request.form['rating']
-            price = request.form['price']
-            description = request.form['description']
-            
-            image_file = request.files['image'] 
-            filename = None
-            image_url = None
-            # In your add_product route, inside the POST block:
-            if image_file and image_file.filename:
-                filename = secure_filename(image_file.filename)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                image_file.save(file_path)
-                print(f"DEBUG: Image saved to: {file_path}") # Add this line
-                image_url = f'img/Products/{filename}'
-
-            conn = connect_to_db()
-            if not conn:
-                flash("Database connection failed during product addition.", "error")
-                return render_template('add_product.html')
-
-            cur = conn.cursor()
-            cur.execute('''
-                INSERT INTO products (name, category, rating, price, description, image_url, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ''', (name, category, float(rating), float(price), description, image_url, session.get('user', 'unknown'))) # Use session.get('user')
-            conn.commit()
-            flash("Product added successfully!", "success")
-            return redirect(url_for('index'))
-        except KeyError as e:
-            print(f"❌ Form field missing: {e}")
-            flash(f"Missing form data: {e}. Please ensure all fields are filled.", "error")
-            return render_template('add_product.html')
-        except ValueError as e:
-            print(f"❌ Data conversion error: {e}")
-            flash(f"Error in data format: {e}. Please check price and rating.", "error")
-            return render_template('add_product.html')
-        except Error as e:
-            print(f"❌ Database error during product insertion: {e}")
-            flash(f"Database error: Could not add product. {e}", "error")
-            return render_template('add_product.html')
-        except Exception as e:
-            print(f"❌ Unexpected error during product addition: {e}")
-            flash(f"An unexpected error occurred: {e}", "error")
-            return render_template('add_product.html')
-        finally:
-            if 'cur' in locals() and cur:
-                cur.close()
-            if conn:
-                conn.close()
-    return render_template('add_product.html')
+    # Redirect directly to the cart page
+    return redirect(url_for('cart'))
+@app.route('/remove_from_cart/<int:product_id>', methods=['GET', 'POST'])
+def remove_from_cart(product_id):
+    if 'user' not in session:
+        flash("Please log in to manage your cart.", "warning")
+        return redirect(url_for('login'))
+    if 'cart' in session:
+        session['cart'] = [item for item in session['cart'] if item['id'] != product_id]
+        session.modified = True
+        flash("Item removed from cart.", "info")
+    return redirect(url_for('cart'))
+@app.route('/cart')
+def cart():
+    # Fetch cart items directly from session
+    cart_items = session.get('cart', [])
+    total_price = sum(item['price'] * item['quantity'] for item in cart_items)
+    # Pass the session cart items directly to the template
+    return render_template('cart.html', cart_items=cart_items, total_price=total_price)
 
 if __name__ == '__main__':
     conn = connect_to_db()

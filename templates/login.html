@@ -26,9 +26,7 @@
     <div class="form-container sign-in-container">
       <form action="{{ url_for('login') }}" method="POST">
         <h1>Sign in</h1>
-        <!-- CHANGE THIS LINE: -->
         <input type="text" name="username" placeholder="Username" required /> 
-        <!-- TO THIS:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ -->
         <input name="password" type="password" placeholder="Password" required />
         <a href="#">Forgot your password?</a>
         <button type="submit">Sign In</button>
