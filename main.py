@@ -107,7 +107,7 @@ def login():
             if user_record:
                 # Store the user's name (username) in the session
                 session['user'] = user_record[0]  # user_record[0] is the name
-
+                session['user'] = user_record[1]  # Store the username
                 # Admin check based on name (username)
                 session['is_admin'] = (user_record[0] == 'sri')
 
@@ -496,6 +496,108 @@ def add_product():
             return jsonify({'success': False, 'message': f'Database error: Could not add product. {e}'}), 500
     else:
         return render_template('add_product.html')
+
+# In your main.py
+
+@app.route('/product/<int:product_id>', methods=['GET', 'POST'])
+def product_detail(product_id):
+    conn = connect_to_db()
+    product = None
+    reviews = []
+    user_review = None # To pre-fill if user has already reviewed
+
+    if conn:
+        try:
+            cursor = conn.cursor()
+
+            # Fetch product details
+            cursor.execute("SELECT id, name, description, category, price, rating, image_url FROM products WHERE id = %s", (product_id,))
+            row = cursor.fetchone()
+            if row:
+                product = {
+                    'id': row[0],
+                    'name': row[1],
+                    'description': row[2],
+                    'category': row[3],
+                    'price': float(row[4]),
+                    'rating': float(row[5]) if row[5] else None,
+                    'image_url': row[6]
+                }
+            else:
+                flash("Product not found.", "warning")
+                return redirect(url_for('index'))
+
+            # Handle new review submission (if POST request)
+            if request.method == 'POST':
+                if 'user' not in session:
+                    flash("Please log in to submit a review.", "warning")
+                    return redirect(url_for('login'))
+
+                # Assuming you store user's actual ID in session['user_id'] during login/signup
+                # For now, let's get the user ID from the database using username
+                current_username = session['user']
+                cursor.execute("SELECT id FROM users WHERE name = %s", (current_username,))
+                user_record = cursor.fetchone()
+                current_user_id = user_record[0] if user_record else None
+
+                rating = request.form.get('rating', type=int)
+                comment = request.form.get('comment')
+
+                if not rating or not comment:
+                    flash("Please provide both a rating and a comment.", "error")
+                elif rating < 1 or rating > 5:
+                    flash("Rating must be between 1 and 5.", "error")
+                else:
+                    # Check if user has already reviewed this product
+                    cursor.execute("SELECT id FROM reviews WHERE product_id = %s AND user_id = %s", (product_id, current_user_id))
+                    existing_review = cursor.fetchone()
+
+                    if existing_review:
+                        # Update existing review
+                        cursor.execute("UPDATE reviews SET rating = %s, comment = %s, created_at = CURRENT_TIMESTAMP WHERE id = %s",
+                                       (rating, comment, existing_review[0]))
+                        flash("Your review has been updated!", "success")
+                    else:
+                        # Insert new review
+                        cursor.execute("INSERT INTO reviews (product_id, user_id, username, rating, comment) VALUES (%s, %s, %s, %s, %s)",
+                                       (product_id, current_user_id, current_username, rating, comment))
+                        flash("Thank you for your review!", "success")
+                    conn.commit()
+                    # Redirect to GET to prevent form resubmission
+                    return redirect(url_for('product_detail', product_id=product_id))
+
+            # Fetch all reviews for the product (after potential new submission)
+            cursor.execute("SELECT username, rating, comment, created_at FROM reviews WHERE product_id = %s ORDER BY created_at DESC", (product_id,))
+            reviews_data = cursor.fetchall()
+            for r in reviews_data:
+                reviews.append({
+                    'username': r[0],
+                    'rating': r[1],
+                    'comment': r[2],
+                    'created_at': r[3].strftime('%Y-%m-%d %H:%M') # Format datetime
+                })
+
+            # Check if current user has already reviewed for pre-filling the form
+            if 'user' in session:
+                current_username = session['user']
+                cursor.execute("SELECT rating, comment FROM reviews WHERE product_id = %s AND username = %s", (product_id, current_username))
+                user_review_data = cursor.fetchone()
+                if user_review_data:
+                    user_review = {'rating': user_review_data[0], 'comment': user_review_data[1]}
+
+
+        except Error as e:
+            print(f"Error fetching product or reviews: {e}")
+            flash("Error loading product details.", "error")
+            return redirect(url_for('index')) # Redirect to index on error
+        finally:
+            conn.close()
+    else:
+        flash("Database connection failed.", "error")
+        return redirect(url_for('index')) # Redirect to index on error
+
+    return render_template('product_detail.html', product=product, reviews=reviews, user_review=user_review)
+
 @app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
 def add_to_cart(product_id):
     if 'user' not in session:
