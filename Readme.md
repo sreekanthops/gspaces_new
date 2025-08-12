@@ -1,18 +1,3 @@
-CREATE TABLE products (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    category TEXT,
-    price NUMERIC,
-    rating NUMERIC,
-    image_url TEXT
-);
-
-
-gspaces=> select * from products;
- id | name | description | category  | price | rating |         image_url       
-   | created_by 
-
 # PostgreSQL 16 Setup on Amazon Linux 2023
 
 This guide explains how to install, initialize, and verify PostgreSQL 16 on an Amazon Linux 2023 EC2 instance.  
@@ -170,3 +155,4 @@ Access at:
 ```
 http://<EC2-Public-IP>:5000
 ```
+
