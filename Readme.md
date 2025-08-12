@@ -69,3 +69,44 @@ Expected output:
 
 ### Notes
 Default authentication for local connections is trust (no password).
+
+# Project Setup Guide – Amazon Linux + PostgreSQL 16 + Flask
+
+## 1. Update and Install Dependencies
+```bash
+sudo yum update -y
+sudo yum install -y gcc python3 python3-pip python3-devel postgresql16 postgresql16-server postgresql16-devel
+```
+
+## 2. Initialize PostgreSQL 16 Database
+```
+sudo /usr/bin/postgresql-16-setup initdb
+```
+
+## 3. Configure PostgreSQL Systemd Service
+Amazon Linux’s default postgresql.service points to `/var/lib/pgsql/data`
+but PostgreSQL 16 initializes in `/var/lib/pgsql/16/data`
+We’ll point the default service to the correct directory:
+```
+sudo mv /var/lib/pgsql/16/data /var/lib/pgsql/data
+sudo chown -R postgres:postgres /var/lib/pgsql/data
+```
+
+## 4. Start PostgreSQL
+```
+sudo systemctl enable --now postgresql
+```
+
+## 5. Verify PostgreSQL is Running
+```
+sudo -u postgres psql -c "SELECT version();"
+```
+You should see something like:
+```
+PostgreSQL 16.9 on x86_64-amazon-linux-gnu, compiled by gcc ...
+```
+
+## 6. Install Python Dependencies
+```
+pip install flask psycopg2-binary
+```
