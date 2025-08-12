@@ -1,66 +1,12 @@
-# PostgreSQL 16 Setup on Amazon Linux 2023
+# GSpaces Deployment on AWS EC2 (PostgreSQL + Flask + Gunicorn + Nginx + Cloudflare SSL)
 
-This guide explains how to install, initialize, and verify PostgreSQL 16 on an Amazon Linux 2023 EC2 instance.  
-It ends with a working PostgreSQL instance and a version check query.
-
----
-
-## 1. Install PostgreSQL 16
-
-```bash
-sudo dnf install postgresql16 postgresql16-server -y
-```
-### 2. Initialize the Database Cluster
-Amazon Linux's postgresql.service expects `PGDATA=/var/lib/pgsql/data`
-
-```bash
-# Remove any existing or empty data directory
-sudo rm -rf /var/lib/pgsql/data
-
-# Initialize database cluster
-sudo -u postgres /usr/bin/initdb -D /var/lib/pgsql/data
-```
-
-Expected output should end with:
-```
-Success. You can now start the database server using:
-    /usr/bin/pg_ctl -D /var/lib/pgsql/data -l logfile start
-```
-
-### 3. Enable and Start PostgreSQL
-```
-sudo systemctl enable --now postgresql
-```
-
-Check status:
-```
-sudo systemctl status postgresql
-```
-Service should be active (running).
-
-### 4. Verify Installation
-Run
-```
-sudo -u postgres psql -c "SELECT version();"
-```
-Expected output:
-```
-                                                   version                                                    
---------------------------------------------------------------------------------------------------------------
- PostgreSQL 16.9 on x86_64-amazon-linux-gnu, compiled by gcc ...
-(1 row)
-
-```
-
-### Notes
-Default authentication for local connections is trust (no password).
-
-# Project Setup Guide – Amazon Linux + PostgreSQL 16 + Flask
-
-### 1. Update and Install Dependencies
+## 1. Server Setup
+### Update & Install Required Packages
 ```bash
 sudo yum update -y
-sudo yum install -y gcc python3 python3-pip python3-devel postgresql16 postgresql16-server postgresql16-devel
+sudo amazon-linux-extras enable postgresql16
+sudo yum install postgresql16 postgresql16-server postgresql16-contrib -y
+sudo yum install python3-pip python3-venv git nginx -y
 ```
 
 ###  2. Initialize PostgreSQL 16 Database
@@ -155,4 +101,64 @@ Access at:
 ```
 http://<EC2-Public-IP>:5000
 ```
+### 12. Create gspaces daemon service
+`/etc/systemd/system/gspaces.service`
+```
+[Unit]
+Description=Gunicorn instance for GSpaces
+After=network.target
 
+[Service]
+User=ec2-user
+Group=nginx
+WorkingDirectory=/home/ec2-user/gspaces_new
+ExecStart=/usr/local/bin/gunicorn --workers 3 --bind unix:/home/ec2-user/gspaces_new/gspaces.sock -m 007 main:app
+
+[Install]
+WantedBy=multi-user.target
+```
+Apply changes
+```
+sudo systemctl daemon-reload
+sudo systemctl restart gspaces
+sudo systemctl status gspaces
+```
+
+### 13. Configure Nginx for GSpaces
+Create a new config file:
+```
+sudo vim /etc/nginx/conf.d/gspaces.conf
+server {
+    listen 80;
+    server_name gspaces.in www.gspaces.in;
+    client_max_body_size 20M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static/ {
+        alias /home/ec2-user/gspaces_new/static/;
+    }
+
+    location /favicon.ico {
+        alias /home/ec2-user/gspaces_new/static/favicon.ico;
+    }
+}
+```
+Run:
+```
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### 14. Update EC2’s IP in Cloudflare
+- 1. Log in to Cloudflare
+  2. Select gspaces domain
+  3. Go to DNS settings -> DNS → Records
+  4. Update A record
+     - Change the IPv4 address to your new EC2 Public IP.
