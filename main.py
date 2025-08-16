@@ -1,5 +1,7 @@
 import os
 import psycopg2
+import random
+import string
 from psycopg2 import Error
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
@@ -199,6 +201,32 @@ def logout():
     session.pop('is_admin', None) # Also remove is_admin from session
     flash("You have been logged out.", "info")
     return redirect(url_for('index'))
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form['email']
+        conn = connect_to_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if user:
+            # generate a temporary password
+            temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+            # update DB
+            cursor.execute("UPDATE users SET password = %s WHERE email = %s", (temp_password, email))
+            conn.commit()
+
+            flash(f"Your temporary password is: {temp_password}", "success")
+            flash("Please login with this password and change it in your profile.", "info")
+            return redirect(url_for('login'))
+        else:
+            flash("Email not found in our records.", "danger")
+
+    return render_template('forgot_password.html')
 
 @app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
