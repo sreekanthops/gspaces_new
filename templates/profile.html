@@ -105,12 +105,11 @@
                         <a href="#personal-details" class="list-group-item list-group-item-action active" data-bs-toggle="list" role="tab">Personal Details</a>
                         <a href="#password-change" class="list-group-item list-group-item-action" data-bs-toggle="list" role="tab">Change Password</a>
                         <a href="#my-orders" class="list-group-item list-group-item-action" data-bs-toggle="list" role="tab">My Orders</a>
-                        <!-- Add more sections as needed -->
                         <a href="#" class="list-group-item list-group-item-action disabled">Payment Methods (Coming Soon)</a>
+                        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
                     </div>
                 </div>
             </div>
-
             <!-- Right Content Frame -->
             <div class="col-md-9">
                 <div class="profile-content-frame tab-content">
