@@ -1,0 +1,43 @@
+<nav class="custom-navbar navbar navbar navbar-expand-md navbar-dark bg-dark" aria-label="GSpaces Navigation Bar">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+            <img src="{{ url_for('static', filename='img/logo-gspaces.svg') }}" alt="GSPACES-LOGO" style="height: 40px; width: auto;">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsFurni" aria-controls="navbarsFurni" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarsFurni">
+            <ul class="custom-navbar-nav navbar-nav ms-auto mb-2 mb-md-0">
+                <li class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <a class="nav-link" href="{{ url_for('index') }}#hero">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#about">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#services">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#portfolio">Products</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#team">Team</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}#contact">Contact</a>
+                </li>
+            </ul>
+            <!-- In your templates/navbar.html -->
+            <ul class="custom-navbar-cta navbar-nav mb-2 mb-md-0 ms-5">
+                <li><a class="nav-link" href="{{ url_for('cart') }}"><img src="{{ url_for('static', filename='img/cart.svg') }}" alt="Cart"></a></li>
+                <li><a class="nav-link" href="{{ url_for('profile') }}"><img src="{{ url_for('static', filename='img/user.svg') }}"></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Top-right Profile Section (If kept fixed on every page) -->
+
+
+<!-- mobile-nav-toggle (if you still need to hide it visually) -->
+<i class="mobile-nav-toggle"></i>
