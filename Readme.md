@@ -13,6 +13,7 @@ sudo pip3 install certbot certbot-nginx
 sudo yum install cronie -y
 sudo systemctl enable crond
 sudo systemctl start crond
+sudo chown -R ec2-user:ec2-user static/img/Products
 ```
 
 ###  2. Initialize PostgreSQL 16 Database
@@ -226,5 +227,6 @@ sudo systemctl restart nginx
 - In your **AWS Security Group**, allow inbound traffic on:
   - **Port 80 (HTTP)**
   - **Port 443 (HTTPS)**
+
 
 
