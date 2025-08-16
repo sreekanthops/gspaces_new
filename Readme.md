@@ -10,6 +10,9 @@ sudo yum install python3 python3-pip python3-venv git nginx -y
 sudo yum install -y nginx
 sudo amazon-linux-extras enable python3.8
 sudo pip3 install certbot certbot-nginx
+sudo yum install cronie -y
+sudo systemctl enable crond
+sudo systemctl start crond
 ```
 
 ###  2. Initialize PostgreSQL 16 Database
@@ -223,4 +226,5 @@ sudo systemctl restart nginx
 - In your **AWS Security Group**, allow inbound traffic on:
   - **Port 80 (HTTP)**
   - **Port 443 (HTTPS)**
+
 
