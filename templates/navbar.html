@@ -37,15 +37,7 @@
 </nav>
 
 <!-- Top-right Profile Section (If kept fixed on every page) -->
-{% if session['user_name'] %}
-  <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
-    <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
-  </div>
-{% else %}
-  <div style="position: fixed; top: 20px; right: 30px; z-index: 9999;" class="d-flex align-items-center gap-3">
-    <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary">Login</a>
-  </div>
-{% endif %}
+
 
 <!-- mobile-nav-toggle (if you still need to hide it visually) -->
 <i class="mobile-nav-toggle"></i>
