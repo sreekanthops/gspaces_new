@@ -6,7 +6,10 @@
 sudo yum update -y
 sudo amazon-linux-extras enable postgresql16
 sudo yum install postgresql16 postgresql16-server postgresql16-contrib -y
-sudo yum install python3-pip python3-venv git nginx -y
+sudo yum install python3 python3-pip python3-venv git nginx -y
+sudo yum install -y nginx
+sudo amazon-linux-extras enable python3.8
+sudo pip3 install certbot certbot-nginx
 ```
 
 ###  2. Initialize PostgreSQL 16 Database
@@ -110,9 +113,10 @@ After=network.target
 
 [Service]
 User=ec2-user
-Group=nginx
+Group=ec2-user
 WorkingDirectory=/home/ec2-user/gspaces_new
-ExecStart=/usr/local/bin/gunicorn --workers 3 --bind unix:/home/ec2-user/gspaces_new/gspaces.sock -m 007 main:app
+ExecStart=/usr/local/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 main:app
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
@@ -123,30 +127,64 @@ sudo systemctl daemon-reload
 sudo systemctl restart gspaces
 sudo systemctl status gspaces
 ```
-
-### 13. Configure Nginx for GSpaces
+### 13. Enable HTTPS with Let’s Encrypt
+Run certbot to issue and configure certificates:
+```
+sudo certbot --nginx -d gspaces.in -d www.gspaces.in
+```
+    - Auto Renewal
+        ```
+        sudo crontab -e
+        ```
+        Insert:
+        ```
+        0 0 * * * certbot renew --quiet
+        ```
+        Certbot sets up a system timer to renew certificates automatically.
+        Verify with:
+        ```
+        sudo systemctl list-timers | grep certbot
+        ```
+    - Test renewal manually:
+        ```
+        sudo certbot renew --dry-run
+        ```
+### 14. Configure Nginx for GSpaces
 Create a new config file:
 ```
 sudo vim /etc/nginx/conf.d/gspaces.conf
+# Redirect all HTTP traffic to HTTPS
 server {
     listen 80;
     server_name gspaces.in www.gspaces.in;
-    client_max_body_size 20M;
+    return 301 https://$host$request_uri;
+}
 
+# HTTPS server block
+server {
+    listen 443 ssl;
+    server_name gspaces.in www.gspaces.in;
+
+    # SSL Certificates (managed by Certbot)
+    ssl_certificate /etc/letsencrypt/live/gspaces.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gspaces.in/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Logs
+    access_log /var/log/nginx/gspaces_access.log;
+    error_log /var/log/nginx/gspaces_error.log;
+
+    # Max upload size (adjust as needed)
+    client_max_body_size 50M;
+
+    # Proxy to Gunicorn
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:5000;  # Gunicorn should run on port 5000 & main.py port 5000
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /static/ {
-        alias /home/ec2-user/gspaces_new/static/;
-    }
-
-    location /favicon.ico {
-        alias /home/ec2-user/gspaces_new/static/favicon.ico;
     }
 }
 ```
@@ -156,9 +194,33 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-### 14. Update EC2’s IP in Cloudflare
-- 1. Log in to Cloudflare
-  2. Select gspaces domain
-  3. Go to DNS settings -> DNS → Records
-  4. Update A record
-     - Change the IPv4 address to your new EC2 Public IP.
+### 15. Cloudflare Configuration
+
+### 🔹 DNS Settings
+1. Go to **Cloudflare → DNS**.
+2. Add the following records:
+   - **A Record** → `gspaces.in` → Public IP of EC2 → **Proxy ON (orange cloud)**
+   - **A Record** → `www.gspaces.in` → Same IP → **Proxy ON (orange cloud)**
+
+---
+
+### 🔹 SSL/TLS Settings
+1. Go to **Cloudflare → SSL/TLS**.
+2. Set SSL/TLS mode to **Full (Strict) ✅**  
+   (This ensures Cloudflare validates your Let’s Encrypt certificate on the server.)
+
+---
+
+### 🔹 Page Rules (Optional)
+- Add a redirect rule:  
+  `http://gspaces.in/*` → `https://gspaces.in/$1`  
+
+👉 This is optional since Nginx already forces HTTP → HTTPS.
+
+---
+
+### 🔹 Firewall
+- In your **AWS Security Group**, allow inbound traffic on:
+  - **Port 80 (HTTP)**
+  - **Port 443 (HTTPS)**
+
