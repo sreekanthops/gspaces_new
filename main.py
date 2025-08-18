@@ -880,6 +880,10 @@ def payment_success():
     # Save transaction details to DB
     return jsonify({"status": "success"})
 
+@app.route("/thankyou")
+def thankyou():
+    return render_template("thankyou.html")
+
 @app.route('/create_order', methods=['POST'])
 def create_order():
     data = request.get_json()
