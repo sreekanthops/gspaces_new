@@ -696,22 +696,30 @@ def remove_from_cart(product_id):
 
 @app.route('/cart')
 def cart():
-    cart_items = get_cart_items()  # however you fetch cart items
+    if 'cart' not in session or not session['cart']:
+        return render_template("cart.html", cart_items=[], total_price=0)
+
+    cart_items = session['cart']
     total_price = sum(item['price'] * item['quantity'] for item in cart_items)
 
-    # Create Razorpay Order
-    order = razorpay_client.order.create({
-        "amount": total_price * 100,  # in paise
-        "currency": "INR",
-        "payment_capture": "1"
-    })
+    # ✅ Create Razorpay Order (only if total_price > 0)
+    if total_price > 0:
+        order_data = {
+            "amount": total_price * 100,  # Razorpay expects amount in paise
+            "currency": "INR",
+            "payment_capture": 1
+        }
+        order = razorpay_client.order.create(order_data)
+        razorpay_order_id = order['id']
+    else:
+        razorpay_order_id = None
 
     return render_template(
-        'cart.html',
+        "cart.html",
         cart_items=cart_items,
         total_price=total_price,
-        razorpay_key="YOUR_KEY_ID",
-        razorpay_order_id=order['id']
+        razorpay_order_id=razorpay_order_id,
+        razorpay_key="rzp_live_R6wg6buSedSnTV"  # <-- replace with your actual key_id
     )
 
 @app.route('/payment/success', methods=['POST'])
@@ -740,3 +748,4 @@ def verify_payment():
         return jsonify({"status": "success"})
     except:
         return jsonify({"status": "failed"}), 400
+
