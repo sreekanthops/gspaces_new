@@ -14,6 +14,10 @@ from google.auth.transport import requests as google_requests
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer
+import razorpay
+
+# Initialize Razorpay client
+razorpay_client = razorpay.Client(auth=("rzp_live_R6wg6buSedSnTV", "xeBC7q5tEirlDg4y4Tc3JEc3"))
 
 app = Flask(__name__) 
 
@@ -175,20 +179,26 @@ def privacy():
 def terms():
     return render_template('terms.html')
 
+@app.route('/refund')
+def refund_policy():
+    return render_template('refund.html')
+
+@app.route('/shipping')
+def shipping_policy():
+    return render_template('shipping.html')
+
 # -------------------------------------------------------------------
 # Auth: Email/password login
 # -------------------------------------------------------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # HTML uses email/password fields
         email = request.form.get('email')
         password = request.form.get('password')
         conn = connect_to_db()
         if not conn:
             flash("Database connection failed during login.", "error")
             return render_template('login.html')
-
         cur = conn.cursor()
         try:
             cur.execute("SELECT id, name, email, password FROM users WHERE email = %s AND password = %s",
@@ -217,21 +227,21 @@ def login():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        name = request.form.get('name') or ''
-        email = request.form.get('email') or ''
-        password = request.form.get('password') or ''
-        conn = connect_to_db()
-        if not conn:
-            flash("Database connection failed.", "error")
-            return redirect(url_for('signup'))
         try:
-            cur = conn.cursor()
-            cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
-            if cur.fetchone():
+            name = request.form.get('name')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            conn = connect_to_db()
+            if not conn:
+                flash("Database connection failed.", "error")
+                return redirect(url_for('signup'))
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            if cursor.fetchone():
                 flash("Email already registered.", "error")
                 return render_template('login.html')
-
-            cur.execute("""
+            
+            cursor.execute("""
                 INSERT INTO users (name, email, password)
                 VALUES (%s, %s, %s)
             """, (name, email, password))
@@ -239,17 +249,21 @@ def signup():
             flash("Signup successful. Please log in.", "success")
             return redirect(url_for('login'))
         except Exception as e:
-            print(f"Signup error: {e}")
+            print(f"❌ Signup error: {e}")
             flash("Signup failed due to a server error.", "error")
             return render_template('login.html')
         finally:
-            cur.close()
-            conn.close()
+            if conn:
+                cursor.close()
+                conn.close()
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.clear()
+    session.pop('user_id', None)  # Ensure all relevant session keys are popped
+    session.pop('user_name', None)
+    session.pop('user_email', None)
+    session.pop('is_admin', None)
     flash("You have been logged out.", "info")
     return redirect(url_for('index'))
 
@@ -266,22 +280,17 @@ def auth_callback():
     try:
         token = oauth.google.authorize_access_token()
         user_info = oauth.google.parse_id_token(token)
-
-        print("Google user_info:", user_info)  # Debug log
-
         email = user_info.get("email")
         name = user_info.get("name") or (email.split("@")[0] if email else "User")
-
         if not email:
             flash("Google did not return an email.", "danger")
             return redirect(url_for("login"))
-
-        # Save in session
         session.clear()
+        # You might want to get or create a user_id for the Google-authenticated user here
+        # For simplicity, we're just setting email and name
         session["user_email"] = email
         session["user_name"] = name
         session["is_admin"] = email in ADMIN_EMAILS
-
         flash(f"Welcome, {name}!", "success")
         return redirect(url_for("profile"))
     except Exception as e:
@@ -289,45 +298,36 @@ def auth_callback():
         flash("Google login failed. Please try again.", "danger")
         return redirect(url_for("login"))
 
-
 # -------------------------------------------------------------------
-# Google One Tap endpoint (what your page calls with the ID token)
+# Google One Tap endpoint
 # -------------------------------------------------------------------
 @app.route('/google_signin', methods=['GET', 'POST'])
 def google_signin():
     if request.method == "GET":
-        # This part kicks off the OAuth flow (redirect to Google)
         redirect_uri = url_for("auth_callback", _external=True)
         return oauth.google.authorize_redirect(redirect_uri)
-
-    # POST flow (if you’re using One Tap or JS to send ID token)
     try:
         data = request.get_json(silent=True) or {}
         token = data.get('credential')
         if not token:
             return make_response(jsonify({"success": False, "message": "Missing credential"}), 400)
-
         idinfo = google_id_token.verify_oauth2_token(
             token,
             google_requests.Request(),
             GOOGLE_CLIENT_ID
         )
-
         if idinfo.get('iss') not in ('accounts.google.com', 'https://accounts.google.com'):
             return make_response(jsonify({"success": False, "message": "Invalid issuer"}), 400)
-
         email = idinfo.get('email')
         name = idinfo.get('name') or (email.split("@")[0] if email else "User")
         if not email:
             return make_response(jsonify({"success": False, "message": "Email missing in token"}), 400)
-
         upsert_user_from_google(idinfo.get('sub'), name, email)
-
         session.clear()
+        # Ensure you set 'user_id' if your application logic relies on it for other operations
         session['user_name'] = name
         session['user_email'] = email
         session['is_admin'] = email in ADMIN_EMAILS
-
         flash(f"Welcome, {name} (Google)!", "success")
         return jsonify({"success": True, "redirect": url_for('index')})
     except ValueError as e:
@@ -782,60 +782,124 @@ def product_detail(product_id):
 
     return render_template('product_detail.html', product=product, reviews=reviews, user_review=user_review)
 
-@app.route('/add_to_cart/<int:product_id>', methods=['POST', 'GET'])
+# -------------------------------------------------------------------
+# Products & Cart
+# -------------------------------------------------------------------
+@app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
 def add_to_cart(product_id):
-    if not session.get('user_email'):
+    # Change 'user' to 'user_email' or 'user_id' based on what you actually set in session
+    if 'user_email' not in session: # <--- CHANGED THIS LINE
         flash("Please log in to add items to your cart.", "warning")
         return redirect(url_for('login'))
-
     conn = connect_to_db()
     if conn:
         try:
-            cur = conn.cursor()
-            cur.execute("SELECT name, price, image_url FROM products WHERE id = %s", (product_id,))
-            product = cur.fetchone()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT name, price, image_url FROM products WHERE id = %s",
+                (product_id,)
+            )
+            product = cursor.fetchone()
             if product:
-                name, price, image_url = product[0], float(product[1]), product[2]
-                cart = session.get('cart', [])
-                for item in cart:
+                product_name = product[0]
+                product_price = float(product[1])
+                product_image_url = product[2]
+                if 'cart' not in session:
+                    session['cart'] = []
+                found = False
+                for item in session['cart']:
                     if item['id'] == product_id:
                         item['quantity'] += 1
+                        found = True
                         break
-                else:
-                    cart.append({'id': product_id, 'name': name, 'price': price,
-                                 'quantity': 1, 'image_url': image_url})
-                session['cart'] = cart
+                if not found:
+                    session['cart'].append({
+                        'id': product_id,
+                        'name': product_name,
+                        'price': product_price,
+                        'quantity': 1,
+                        'image_url': product_image_url
+                    })
                 session.modified = True
-                flash(f"{name} added to cart!", "success")
+                flash(f"{product_name} added to cart!", "success")
             else:
                 flash("Product not found.", "error")
         except Error as e:
-            print(f"Add to cart error: {e}")
+            print(f"Error adding to cart: {e}")
             flash("Error adding product to cart.", "error")
         finally:
             conn.close()
     else:
-        flash("Database connection failed.", "error")
+        flash("Database connection failed, cannot add to cart.", "error")
     return redirect(url_for('cart'))
 
-@app.route('/remove_from_cart/<int:product_id>', methods=['POST', 'GET'])
+@app.route('/remove_from_cart/<int:product_id>', methods=['GET', 'POST'])
 def remove_from_cart(product_id):
-    if not session.get('user_email'):
+    # Change 'user' to 'user_email' or 'user_id' based on what you actually set in session
+    if 'user_email' not in session: # <--- CHANGED THIS LINE
         flash("Please log in to manage your cart.", "warning")
         return redirect(url_for('login'))
-    cart = session.get('cart', [])
-    cart = [i for i in cart if i['id'] != product_id]
-    session['cart'] = cart
-    session.modified = True
-    flash("Item removed from cart.", "info")
+    if 'cart' in session:
+        session['cart'] = [item for item in session['cart'] if item['id'] != product_id]
+        session.modified = True
+        flash("Item removed from cart.", "info")
     return redirect(url_for('cart'))
 
 @app.route('/cart')
 def cart():
-    cart_items = session.get('cart', [])
-    total_price = sum(item['price'] * item['quantity'] for item in cart_items)
-    return render_template('cart.html', cart_items=cart_items, total_price=total_price)
+    if 'cart' not in session or not session['cart']:
+        return render_template("cart.html", cart_items=[], total_price=0)
 
+    cart_items = session['cart']
+    total_price = sum(item['price'] * item['quantity'] for item in cart_items)
+
+    # ✅ Create Razorpay Order (only if total_price > 0)
+    if total_price > 0:
+        order_data = {
+            "amount": total_price * 100,  # Razorpay expects amount in paise
+            "currency": "INR",
+            "payment_capture": 1
+        }
+        order = razorpay_client.order.create(order_data)
+        razorpay_order_id = order['id']
+    else:
+        razorpay_order_id = None
+
+    return render_template(
+        "cart.html",
+        cart_items=cart_items,
+        total_price=total_price,
+        razorpay_order_id=razorpay_order_id,
+        razorpay_key="rzp_live_R6wg6buSedSnTV"  # <-- replace with your actual key_id
+    )
+
+@app.route('/payment/success', methods=['POST'])
+def payment_success():
+    data = request.json
+    # You should verify signature here with razorpay utility
+    # Save transaction details to DB
+    return jsonify({"status": "success"})
+
+@app.route('/create_order', methods=['POST'])
+def create_order():
+    data = request.get_json()
+    amount = data['amount'] * 100  # in paise
+    order = client.order.create({
+        'amount': amount,
+        'currency': 'INR',
+        'payment_capture': 1
+    })
+    return jsonify(order)
+
+@app.route('/verify_payment', methods=['POST'])
+def verify_payment():
+    data = request.get_json()
+    try:
+        client.utility.verify_payment_signature(data)
+        return jsonify({"status": "success"})
+    except:
+        return jsonify({"status": "failed"}), 400
+    
 # -------------------------------------------------------------------
 # Boot
 # -------------------------------------------------------------------
