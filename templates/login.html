@@ -1,167 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login / Signup</title>
-<style>
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body {
-    font-family: 'Poppins', sans-serif;
-    background: #eef2f3; /* soft greyish background */
-    display:flex; justify-content:center; align-items:center; height:100vh;
-  }
-  .container {
-    background:#fff;
-    border-radius:12px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.15);
-    position:relative;
-    overflow:hidden;
-    width:900px;
-    max-width:100%;
-    min-height:600px;
-  }
-
-  .overlay-container {
-    position:absolute; top:0; left:50%; width:50%; height:100%;
-    overflow:hidden; transition:transform .6s ease-in-out; z-index:100;
-  }
-  .container.right-panel-active .overlay-container { transform:translateX(-100%); }
-
-  .overlay {
-    background: linear-gradient(135deg, #667eea, #764ba2); /* modern purple-blue gradient */
-    color:#fff;
-    position:relative; left:-100%;
-    height:100%; width:200%;
-    transform:translateX(0); transition:transform .6s ease-in-out;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .container.right-panel-active .overlay { transform:translateX(50%); }
-
-  .overlay-panel {
-    position:absolute;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:0 40px;
-    text-align:center;
-    top:0; height:100%; width:50%;
-  }
-  .overlay-panel h1 {
-    font-size:28px; margin-bottom:15px; font-weight:700;
-  }
-  .overlay-panel p {
-    font-size:16px; margin-bottom:25px; max-width:260px; line-height:1.5;
-  }
-  .overlay-left { left:0; }
-  .overlay-right { right:0; }
-  .ghost {
-    background:transparent; border:2px solid #fff;
-    border-radius:20px; padding:12px 40px;
-    color:#fff; font-size:14px; font-weight:600;
-    text-transform:uppercase; cursor:pointer;
-    transition:0.3s;
-  }
-  .ghost:hover {
-    background:rgba(255,255,255,0.15);
-  }
-.form-container {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  transition: all 0.6s ease-in-out;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  padding: 0 50px;
-  text-align: center;
-  width: 50%;
-}
-
-.sign-in-container { left: 0; z-index: 2; }
-.sign-up-container { left: 0; opacity: 0; z-index: 1; }
-.container.right-panel-active .sign-up-container {
-  transform: translateX(100%);
-  opacity: 1;
-  z-index: 5;
-}
-.container.right-panel-active .sign-in-container {
-  transform: translateX(100%);
-}
-
-form {
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  padding: 0 40px;
-  height: 100%;
-  justify-content: center;
-  align-items: center;
-}
-
-form h1 {
-  font-weight: bold;
-  margin-bottom: 20px;
-  font-size: 26px;
-}
-
-form input {
-  background: #f0f0f0;
-  border: none;
-  padding: 12px 15px;
-  margin: 8px 0;
-  width: 100%;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-form button {
-  border-radius: 20px;
-  border: none;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
-  padding: 12px 45px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: transform 80ms ease-in;
-  margin-top: 15px;
-  cursor: pointer;
-}
-
-form button:hover {
-  opacity: 0.9;
-}
-
-.g_id_signin {
-  margin: 10px 0;
-}
-
-.forgot-link {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #667eea;
-  text-decoration: none;
-}
-.forgot-link:hover {
-  text-decoration: underline;
-}
-
-</style>
-
-</head>
 <body>
-  <div class="container" id="container">
-    <!-- Sign Up -->
-    <div class="form-container sign-up-container">
-      <form id="signup-form" action="/signup" method="POST">
-        <h1>Create Account</h1>
-        <div id="g_id_onload"
-          data-client_id="226581903418-3ed1eqsl14qlou4nmk2m9sdf6il1mluu.apps.googleusercontent.com"
-          data-callback="handleCredentialResponse"
-          data-auto_prompt="false"></div>
-        <div class="g_id_signin" data-type="standard" data-size="large"></div>
+  <!-- ✅ Flash Message Block - Correct Position -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div id="flash-messages">
+        {% for category, message in messages %}
+          <div class="alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
+  <div class="container" id="container">
+    <!-- ✅ Sign-Up Form -->
+    <div class="form-container sign-up-container">
+      <form action="{{ url_for('signup') }}" method="POST">
+        <h1>Create Account</h1>
         <input name="name" type="text" placeholder="Name" required />
         <input name="email" type="email" placeholder="Email" required />
         <input name="password" type="password" placeholder="Password" required />
@@ -169,63 +22,334 @@ form button:hover {
       </form>
     </div>
 
-    <!-- Sign In -->
+<!-- ✅ Sign-In Form -->
     <div class="form-container sign-in-container">
-      <form id="signin-form" action="/login" method="POST">
+      <form action="{{ url_for('login') }}" method="POST">
         <h1>Sign in</h1>
-        <div class="g_id_signin" data-type="standard" data-size="large"></div>
-        <input name="email" type="email" placeholder="Email" required />
+        <input type="text" name="username" placeholder="Username" required /> 
         <input name="password" type="password" placeholder="Password" required />
+        <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
         <button type="submit">Sign In</button>
-		<a href="/forgot_password" class="forgot-link">Forgot your password?</a>
       </form>
     </div>
 
-	<!-- Overlay Section -->
-	<div class="overlay-container">
-	<div class="overlay">
-		<div class="overlay-panel overlay-left">
-		<h1>Welcome Back!</h1>
-		<p>Login with your personal info to stay connected with us.</p>
-		<button class="ghost" id="signIn" type="button">Sign In</button>
-		</div>
-		<div class="overlay-panel overlay-right">
-		<h1>Hello, Friend!</h1>
-		<p>Enter your details and start your journey with us today.</p>
-		<button class="ghost" id="signUp" type="button">Sign Up</button>
-		</div>
-	</div>
-	</div>
+    <!-- Overlay -->
+    <div class="overlay-container">
+      <div class="overlay">
+        <div class="overlay-panel overlay-left">
+          <h1>Welcome Back!</h1>
+          <p>To keep connected with us please login with your personal info</p>
+          <button class="ghost" id="signIn">Sign In</button>
+        </div>
+        <div class="overlay-panel overlay-right">
+          <h1>Join Our GSpaces Family!</h1>
+          <button class="ghost" id="signUp">Sign Up</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    const container = document.getElementById("container");
-    document.getElementById("signUp").addEventListener("click", () => container.classList.add("right-panel-active"));
-    document.getElementById("signIn").addEventListener("click", () => container.classList.remove("right-panel-active"));
+<style>
 
-    // One Tap / button callback
-    async function handleCredentialResponse(response) {
-      try {
-        const res = await fetch("/google_signin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: response.credential })
-        });
-        const data = await res.json();
-        if (data.success) {
-          window.location.href = data.redirect || "/";
-        } else {
-          alert(data.message || "Google sign-in failed");
-        }
-      } catch (e) {
-        console.error(e);
-        alert("Network error during Google sign-in");
-      }
-    }
-    window.handleCredentialResponse = handleCredentialResponse;
-  </script>
-</body>
-</html>
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,800');
 
+* {
+	box-sizing: border-box;
+}
+
+#flash-messages {
+  position: relative;
+  margin-bottom: 20px;
+  text-align: center;
+  width: 100%;
+}
+
+.alert {
+  padding: 12px;
+  border-radius: 5px;
+  margin: 10px auto;
+  width: 90%;
+  max-width: 500px;
+  font-size: 14px;
+  color: white;
+}
+
+.alert.success {
+  background-color: #4CAF50; /* Green for success */
+}
+
+.alert.error {
+  background-color: #f44336; /* Red for errors */
+}
+
+body {
+	background: #f6f5f7;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+	font-family: 'Montserrat', sans-serif;
+	height: 100vh;
+	margin: -20px 0 50px;
+}
+
+h1 {
+	font-weight: bold;
+	margin: 0;
+}
+
+h2 {
+	text-align: center;
+}
+
+p {
+	font-size: 14px;
+	font-weight: 100;
+	line-height: 20px;
+	letter-spacing: 0.5px;
+	margin: 20px 0 30px;
+}
+
+span {
+	font-size: 12px;
+}
+
+a {
+	color: #333;
+	font-size: 14px;
+	text-decoration: none;
+	margin: 15px 0;
+}
+
+button {
+	border-radius: 20px;
+	border: 1px solid #FF4B2B;
+	background-color: #FF4B2B;
+	color: #FFFFFF;
+	font-size: 12px;
+	font-weight: bold;
+	padding: 12px 45px;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	transition: transform 80ms ease-in;
+}
+
+button:active {
+	transform: scale(0.95);
+}
+
+button:focus {
+	outline: none;
+}
+
+button.ghost {
+	background-color: transparent;
+	border-color: #FFFFFF;
+}
+
+form {
+	background-color: #FFFFFF;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	padding: 0 50px;
+	height: 100%;
+	text-align: center;
+}
+
+input {
+	background-color: #eee;
+	border: none;
+	padding: 12px 15px;
+	margin: 8px 0;
+	width: 100%;
+}
+
+.container {
+	background-color: #fff;
+	border-radius: 10px;
+  	box-shadow: 0 14px 28px rgba(0,0,0,0.25), 
+			0 10px 10px rgba(0,0,0,0.22);
+	position: relative;
+	overflow: hidden;
+	width: 768px;
+	max-width: 100%;
+	min-height: 480px;
+}
+
+.form-container {
+	position: absolute;
+	top: 0;
+	height: 100%;
+	transition: all 0.6s ease-in-out;
+}
+
+.sign-in-container {
+	left: 0;
+	width: 50%;
+	z-index: 2;
+}
+
+.container.right-panel-active .sign-in-container {
+	transform: translateX(100%);
+}
+
+.sign-up-container {
+	left: 0;
+	width: 50%;
+	opacity: 0;
+	z-index: 1;
+}
+
+.container.right-panel-active .sign-up-container {
+	transform: translateX(100%);
+	opacity: 1;
+	z-index: 5;
+	animation: show 0.6s;
+}
+
+@keyframes show {
+	0%, 49.99% {
+		opacity: 0;
+		z-index: 1;
+	}
+	
+	50%, 100% {
+		opacity: 1;
+		z-index: 5;
+	}
+}
+
+.overlay-container {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	width: 50%;
+	height: 100%;
+	overflow: hidden;
+	transition: transform 0.6s ease-in-out;
+	z-index: 100;
+}
+
+.container.right-panel-active .overlay-container{
+	transform: translateX(-100%);
+}
+
+.overlay {
+	background: #FF416C;
+	background: -webkit-linear-gradient(to right, #FF4B2B, #FF416C);
+	background: linear-gradient(to right, #FF4B2B, #FF416C);
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: 0 0;
+	color: #FFFFFF;
+	position: relative;
+	left: -100%;
+	height: 100%;
+	width: 200%;
+  	transform: translateX(0);
+	transition: transform 0.6s ease-in-out;
+}
+
+.container.right-panel-active .overlay {
+  	transform: translateX(50%);
+}
+
+.overlay-panel {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	padding: 0 40px;
+	text-align: center;
+	top: 0;
+	height: 100%;
+	width: 50%;
+	transform: translateX(0);
+	transition: transform 0.6s ease-in-out;
+}
+
+.overlay-left {
+	transform: translateX(-20%);
+}
+
+.container.right-panel-active .overlay-left {
+	transform: translateX(0);
+}
+
+.overlay-right {
+	right: 0;
+	transform: translateX(0);
+}
+
+.container.right-panel-active .overlay-right {
+	transform: translateX(20%);
+}
+
+.social-container {
+	margin: 20px 0;
+}
+
+.social-container a {
+	border: 1px solid #DDDDDD;
+	border-radius: 50%;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	margin: 0 5px;
+	height: 40px;
+	width: 40px;
+}
+
+footer {
+    background-color: #222;
+    color: #fff;
+    font-size: 14px;
+    bottom: 0;
+    position: fixed;
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 999;
+}
+
+footer p {
+    margin: 10px 0;
+}
+
+footer i {
+    color: red;
+}
+
+footer a {
+    color: #3c97bf;
+    text-decoration: none;
+}
+</style>
+<script>
+const signUpButton = document.getElementById('signUp');
+const signInButton = document.getElementById('signIn');
+const container = document.getElementById('container');
+
+signUpButton.addEventListener('click', () => {
+	container.classList.add("right-panel-active");
+});
+
+signInButton.addEventListener('click', () => {
+	container.classList.remove("right-panel-active");
+});
+
+// 👇 Automatically show sign-in panel if flash message exists (like after signup)
+window.addEventListener('DOMContentLoaded', () => {
+	const flashMessages = document.getElementById('flash-messages');
+	if (flashMessages) {
+		container.classList.remove("right-panel-active"); // Show login side
+	}
+});
+setTimeout(() => {
+	const flash = document.getElementById('flash-messages');
+	if (flash) flash.style.display = 'none';
+}, 5000);
+</script>
