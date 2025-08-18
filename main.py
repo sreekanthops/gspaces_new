@@ -6,6 +6,10 @@ from psycopg2 import Error
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 from flask import jsonify # Add this import at the top
+import razorpay
+
+# Initialize Razorpay client
+razorpay_client = razorpay.Client(auth=("rzp_live_R6wg6buSedSnTV", "xeBC7q5tEirlDg4y4Tc3JEc3"))
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'supersecretkey'  # Needed for flash messages
@@ -87,6 +91,14 @@ def privacy():
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
+
+@app.route('/refund')
+def refund_policy():
+    return render_template('refund.html')
+
+@app.route('/shipping')
+def shipping_policy():
+    return render_template('shipping.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -681,18 +693,50 @@ def remove_from_cart(product_id):
         session.modified = True
         flash("Item removed from cart.", "info")
     return redirect(url_for('cart'))
+
 @app.route('/cart')
 def cart():
-    # Fetch cart items directly from session
-    cart_items = session.get('cart', [])
+    cart_items = get_cart_items()  # however you fetch cart items
     total_price = sum(item['price'] * item['quantity'] for item in cart_items)
-    # Pass the session cart items directly to the template
-    return render_template('cart.html', cart_items=cart_items, total_price=total_price)
 
-if __name__ == '__main__':
-    conn = connect_to_db()
-    if conn:
-        create_users_table(conn)  # Ensure users table is created
-        create_products_table(conn)
-        conn.close()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Create Razorpay Order
+    order = razorpay_client.order.create({
+        "amount": total_price * 100,  # in paise
+        "currency": "INR",
+        "payment_capture": "1"
+    })
+
+    return render_template(
+        'cart.html',
+        cart_items=cart_items,
+        total_price=total_price,
+        razorpay_key="YOUR_KEY_ID",
+        razorpay_order_id=order['id']
+    )
+
+@app.route('/payment/success', methods=['POST'])
+def payment_success():
+    data = request.json
+    # You should verify signature here with razorpay utility
+    # Save transaction details to DB
+    return jsonify({"status": "success"})
+
+@app.route('/create_order', methods=['POST'])
+def create_order():
+    data = request.get_json()
+    amount = data['amount'] * 100  # in paise
+    order = client.order.create({
+        'amount': amount,
+        'currency': 'INR',
+        'payment_capture': 1
+    })
+    return jsonify(order)
+
+@app.route('/verify_payment', methods=['POST'])
+def verify_payment():
+    data = request.get_json()
+    try:
+        client.utility.verify_payment_signature(data)
+        return jsonify({"status": "success"})
+    except:
+        return jsonify({"status": "failed"}), 400
