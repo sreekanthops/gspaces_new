@@ -1,73 +1,102 @@
 import os
-import psycopg2
 import random
 import string
+import psycopg2
 from psycopg2 import Error
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 from werkzeug.utils import secure_filename
-from flask import jsonify # Add this import at the top
-import razorpay
 
-# Initialize Razorpay client
-razorpay_client = razorpay.Client(auth=("rzp_live_R6wg6buSedSnTV", "xeBC7q5tEirlDg4y4Tc3JEc3"))
+# Google One Tap (ID token verification)
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
-app = Flask(__name__, static_folder='static')
-app.secret_key = 'supersecretkey'  # Needed for flash messages
+# Google OAuth (redirect flow)
+from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
 
-# Upload folder setup
-UPLOAD_FOLDER = os.path.join('static', 'img', 'Products')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app = Flask(__name__) 
 
-# Database configuration
+# Mail Config
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'sri.chityala501@gmail.com'
+app.config['MAIL_PASSWORD'] = 'zupd zixc vvzp kptk'
+app.config['MAIL_DEFAULT_SENDER'] = 'sri.chityala501@gmail.com'
+
+mail = Mail(app)
+
+# Serializer for password reset
+app.secret_key = 'supersecretkey'
+s = URLSafeTimedSerializer(app.secret_key)
+# -------------------------------------------------------------------
+# CONFIG
+# -------------------------------------------------------------------
+# Read from env if available; fallback to the values you pasted.
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "226581903418-3ed1eqsl14qlou4nmk2m9sdf6il1mluu.apps.googleusercontent.com")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "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")
+
+ADMIN_EMAILS = {"sri.chityala501@gmail.com", "srichityala501@gmail.com"}
+
 DB_NAME = "gspaces"
 DB_USER = "sri"
 DB_PASSWORD = "gspaces2025"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 
-@app.template_filter('inr')
-def inr_format(value):
-    try:
-        return f"{float(value):.2f}"
-    except:
-        return value
+# Uploads
+UPLOAD_FOLDER = os.path.join('static', 'img', 'Products')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# -------------------------------------------------------------------
+# OAUTH (redirect flow) – optional in addition to One Tap
+# -------------------------------------------------------------------
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id="226581903418-3ed1eqsl14qlou4nmk2m9sdf6il1mluu.apps.googleusercontent.com",
+    client_secret="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",
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+# -------------------------------------------------------------------
+# DB helpers
+# -------------------------------------------------------------------
 def connect_to_db():
     try:
         conn = psycopg2.connect(
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            host=DB_HOST,
-            port=DB_PORT
+            database=DB_NAME, user=DB_USER, password=DB_PASSWORD,
+            host=DB_HOST, port=DB_PORT
         )
-        print("Connected to PostgreSQL DB")
         return conn
     except Error as e:
-        print(f"Database connection error: {e}")
+        print(f"DB connection error: {e}")
         return None
 
 def create_users_table(conn):
     try:
-        cursor = conn.cursor()
-        cursor.execute("""
+        cur = conn.cursor()
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL
+                password VARCHAR(255) NOT NULL,
+                address VARCHAR(255),
+                phone VARCHAR(50)
             );
         """)
         conn.commit()
-        print("Table 'users' ready.")
     except Error as e:
         print(f"Error creating users table: {e}")
 
 def create_products_table(conn):
     try:
-        cursor = conn.cursor()
-        cursor.execute("""
+        cur = conn.cursor()
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -80,10 +109,64 @@ def create_products_table(conn):
             );
         """)
         conn.commit()
-        print("Table 'products' ready.")
     except Error as e:
         print(f"Error creating products table: {e}")
 
+def create_reviews_table(conn):
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS reviews (
+                id SERIAL PRIMARY KEY,
+                product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                username VARCHAR(255),
+                rating INTEGER CHECK (rating BETWEEN 1 AND 5),
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+    except Error as e:
+        print(f"Error creating reviews table: {e}")
+
+# -------------------------------------------------------------------
+# Utility
+# -------------------------------------------------------------------
+@app.template_filter('inr')
+def inr_format(value):
+    try:
+        return f"{float(value):.2f}"
+    except:
+        return value
+
+def upsert_user_from_google(google_sub, name, email):
+    """Insert user if missing; return (name, email)."""
+    conn = connect_to_db()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, email FROM users WHERE email = %s", (email,))
+        row = cur.fetchone()
+        if not row:
+            cur.execute("""
+                INSERT INTO users (name, email, password)
+                VALUES (%s, %s, %s)
+                RETURNING id
+            """, (name or email.split("@")[0], email, ""))
+            conn.commit()
+        return (name or email.split("@")[0], email)
+    except Exception as e:
+        print(f"upsert_user_from_google error: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+# -------------------------------------------------------------------
+# Routes: marketing & legal
+# -------------------------------------------------------------------
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
@@ -92,53 +175,244 @@ def privacy():
 def terms():
     return render_template('terms.html')
 
-@app.route('/refund')
-def refund_policy():
-    return render_template('refund.html')
-
-@app.route('/shipping')
-def shipping_policy():
-    return render_template('shipping.html')
-
+# -------------------------------------------------------------------
+# Auth: Email/password login
+# -------------------------------------------------------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # CHANGE THIS LINE: Receive 'username' instead of 'email'
-        username = request.form['username'] 
-        password = request.form['password']
+        # HTML uses email/password fields
+        email = request.form.get('email')
+        password = request.form.get('password')
         conn = connect_to_db()
         if not conn:
             flash("Database connection failed during login.", "error")
-            return render_template('login.html', show_login_form=True)
+            return render_template('login.html')
 
         cur = conn.cursor()
         try:
-            # CHANGE THIS QUERY: Authenticate by 'name' (username) and 'password'
-            # Assuming your 'users' table has a 'name' column that stores the username
-            cur.execute("SELECT name, email, password FROM users WHERE name = %s AND password = %s", (username, password))
-            user_record = cur.fetchone()
-
-            if user_record:
-                # Store the user's name (username) in the session
-                session['user'] = user_record[0]  # user_record[0] is the name
-                session['user'] = user_record[1]  # Store the username
-                # Admin check based on name (username)
-                session['is_admin'] = (user_record[0] == 'sri')
-
-                flash(f"Welcome, {session['user']}!", "success")
-                return redirect('/')
+            cur.execute("SELECT id, name, email, password FROM users WHERE email = %s AND password = %s",
+                        (email, password))
+            user = cur.fetchone()
+            if user:
+                session.clear()
+                session['user_id'] = user[0]
+                session['user_name'] = user[1]
+                session['user_email'] = user[2]
+                session['is_admin'] = user[2] in ADMIN_EMAILS
+                flash(f"Welcome, {session['user_name']}!", "success")
+                return redirect(url_for('index'))
             else:
-                flash("Invalid username or password", "error")
-                return render_template('login.html', show_login_form=True)
+                flash("Invalid email or password", "error")
+                return render_template('login.html')
         except Error as e:
-            print(f"Login database error: {e}")
-            flash("An error occurred during login. Please try again.", "error")
-            return render_template('login.html', show_login_form=True)
+            print(f"Login DB error: {e}")
+            flash("An error occurred during login.", "error")
+            return render_template('login.html')
         finally:
             cur.close()
             conn.close()
     return render_template('login.html')
 
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        name = request.form.get('name') or ''
+        email = request.form.get('email') or ''
+        password = request.form.get('password') or ''
+        conn = connect_to_db()
+        if not conn:
+            flash("Database connection failed.", "error")
+            return redirect(url_for('signup'))
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
+            if cur.fetchone():
+                flash("Email already registered.", "error")
+                return render_template('login.html')
+
+            cur.execute("""
+                INSERT INTO users (name, email, password)
+                VALUES (%s, %s, %s)
+            """, (name, email, password))
+            conn.commit()
+            flash("Signup successful. Please log in.", "success")
+            return redirect(url_for('login'))
+        except Exception as e:
+            print(f"Signup error: {e}")
+            flash("Signup failed due to a server error.", "error")
+            return render_template('login.html')
+        finally:
+            cur.close()
+            conn.close()
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for('index'))
+
+# -------------------------------------------------------------------
+# Google OAuth (redirect flow) — optional button to “Continue with Google”
+# -------------------------------------------------------------------
+@app.route("/login/google")
+def login_google():
+    redirect_uri = url_for("auth_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route("/auth/callback")
+def auth_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+        user_info = oauth.google.parse_id_token(token)
+
+        print("Google user_info:", user_info)  # Debug log
+
+        email = user_info.get("email")
+        name = user_info.get("name") or (email.split("@")[0] if email else "User")
+
+        if not email:
+            flash("Google did not return an email.", "danger")
+            return redirect(url_for("login"))
+
+        # Save in session
+        session.clear()
+        session["user_email"] = email
+        session["user_name"] = name
+        session["is_admin"] = email in ADMIN_EMAILS
+
+        flash(f"Welcome, {name}!", "success")
+        return redirect(url_for("profile"))
+    except Exception as e:
+        print(f"Google callback error: {e}")
+        flash("Google login failed. Please try again.", "danger")
+        return redirect(url_for("login"))
+
+
+# -------------------------------------------------------------------
+# Google One Tap endpoint (what your page calls with the ID token)
+# -------------------------------------------------------------------
+@app.route('/google_signin', methods=['GET', 'POST'])
+def google_signin():
+    if request.method == "GET":
+        # This part kicks off the OAuth flow (redirect to Google)
+        redirect_uri = url_for("auth_callback", _external=True)
+        return oauth.google.authorize_redirect(redirect_uri)
+
+    # POST flow (if you’re using One Tap or JS to send ID token)
+    try:
+        data = request.get_json(silent=True) or {}
+        token = data.get('credential')
+        if not token:
+            return make_response(jsonify({"success": False, "message": "Missing credential"}), 400)
+
+        idinfo = google_id_token.verify_oauth2_token(
+            token,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+
+        if idinfo.get('iss') not in ('accounts.google.com', 'https://accounts.google.com'):
+            return make_response(jsonify({"success": False, "message": "Invalid issuer"}), 400)
+
+        email = idinfo.get('email')
+        name = idinfo.get('name') or (email.split("@")[0] if email else "User")
+        if not email:
+            return make_response(jsonify({"success": False, "message": "Email missing in token"}), 400)
+
+        upsert_user_from_google(idinfo.get('sub'), name, email)
+
+        session.clear()
+        session['user_name'] = name
+        session['user_email'] = email
+        session['is_admin'] = email in ADMIN_EMAILS
+
+        flash(f"Welcome, {name} (Google)!", "success")
+        return jsonify({"success": True, "redirect": url_for('index')})
+    except ValueError as e:
+        print(f"Google token verify error: {e}")
+        return make_response(jsonify({"success": False, "message": "Invalid token"}), 400)
+    except Exception as e:
+        print(f"google_signin server error: {e}")
+        return make_response(jsonify({"success": False, "message": "Server error"}), 500)
+
+
+# ----------------
+# Forgot password
+# ----------------
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form['email']
+
+        # Check if user exists
+        conn = psycopg2.connect(database="gspaces", user="sri", password="gspaces2025", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        conn.close()
+
+        if user:
+            # Generate token valid for 1 hour
+            token = s.dumps(email, salt='password-reset-salt')
+            reset_url = url_for('reset_password', token=token, _external=True)
+
+            # Send email
+            msg = Message('Password Reset Request', recipients=[email])
+            msg.body = f'''Hi,
+
+To reset your password, click the link below:
+{reset_url}
+
+If you didn’t request this, please ignore.
+
+Regards,
+GSpaces Team
+'''
+            mail.send(msg)
+
+            flash('A reset link has been sent to your email.', 'success')
+        else:
+            flash('No account found with that email.', 'danger')
+
+    return render_template('forgot_password.html')
+
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        # Verify token (expires in 1 hour = 3600s)
+        email = s.loads(token, salt='password-reset-salt', max_age=3600)
+    except Exception:
+        flash('The reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        new_password = request.form['password']
+
+        # Update password in DB
+        conn = psycopg2.connect(
+            database="gspaces",
+            user="sri",
+            password="gspaces2025",
+            host="localhost",
+            port="5432"
+        )
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET password = %s WHERE email = %s", (new_password, email))
+        conn.commit()
+        conn.close()
+
+        flash('Your password has been reset. Please login.', 'success')
+        return redirect(url_for('login'))
+
+    # Render reset password form
+    return render_template('reset_password.html', token=token)
+
+# -------------------------------------------------------------------
+# Home
+# -------------------------------------------------------------------
 @app.route('/')
 def index():
     conn = connect_to_db()
@@ -146,16 +420,15 @@ def index():
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, name, description, category, price, rating, image_url FROM products ORDER BY id;")
-            products_data = cursor.fetchall()
-            for row in products_data:
+            cursor.execute("""
+                SELECT id, name, description, category, price, rating, image_url
+                FROM products ORDER BY id;
+            """)
+            for row in cursor.fetchall():
                 product_list.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'description': row[2],
-                    'category': row[3],
-                    'price': float(row[4]),
-                    'rating': float(row[5]) if row[5] else None,
+                    'id': row[0], 'name': row[1], 'description': row[2],
+                    'category': row[3], 'price': float(row[4]),
+                    'rating': float(row[5]) if row[5] is not None else None,
                     'image_url': row[6]
                 })
         except Error as e:
@@ -165,93 +438,179 @@ def index():
             conn.close()
     else:
         flash("Error connecting to database to fetch products.", "error")
-    # Pass 'user' (which is now the NAME from session) and 'is_admin' to the template
-    return render_template('index.html', 
-                           products=product_list, 
-                           user=session.get('user'), # This will now be the username
-                           is_admin=session.get('is_admin', False)) 
-@app.route('/signup', methods=['GET', 'POST']) # Added GET method for displaying signup form
-def signup():
+
+    user_display = session.get('user_name') or session.get('user_email')
+    return render_template('index.html',
+                           products=product_list,
+                           user=user_display,
+                           is_admin=session.get('is_admin', False))
+
+# -------------------------------------------------------------------
+# Profile
+# -------------------------------------------------------------------
+@app.route('/profile')
+def profile():
+    if not session.get('user_email'):
+        flash("Please log in to view your profile.", "info")
+        return redirect(url_for('login'))
+
+    user_details = {
+        'name': session.get('user_name'),
+        'email': session.get('user_email'),
+        'address': 'Not provided',
+        'phone': 'Not provided'
+    }
+
+    conn = connect_to_db()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT name, email, address, phone FROM users WHERE email = %s",
+                        (session['user_email'],))
+            rec = cur.fetchone()
+            if rec:
+                user_details['name'] = rec[0]
+                user_details['email'] = rec[1]
+                user_details['address'] = rec[2] or 'Not provided'
+                user_details['phone'] = rec[3] or 'Not provided'
+        except Error as e:
+            print(f"Error fetching profile data: {e}")
+            flash("Error loading profile data.", "error")
+        finally:
+            conn.close()
+
+    return render_template('profile.html', user=user_details['name'],
+                           user_details=user_details, user_orders=[])
+
+@app.route('/update_profile', methods=['POST'])
+def update_profile():
+    if not session.get('user_email'):
+        flash("Please log in to update your profile.", "warning")
+        return redirect(url_for('login'))
+
+    name = request.form.get('name')
+    email = request.form.get('email')
+    address = request.form.get('address')
+    phone = request.form.get('phone')
+
+    conn = connect_to_db()
+    if not conn:
+        flash("Database connection failed.", "error")
+        return redirect(url_for('profile'))
+
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users
+               SET name = %s, email = %s, address = %s, phone = %s
+             WHERE email = %s
+        """, (name, email, address, phone, session['user_email']))
+        conn.commit()
+
+        session['user_name'] = name
+        session['user_email'] = email
+        flash("Profile updated successfully!", "success")
+    except Error as e:
+        print(f"Error updating profile: {e}")
+        flash("Failed to update profile.", "error")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for('profile'))
+
+@app.route('/change_password', methods=['POST'])
+def change_password():
+    if not session.get('user_email'):
+        flash("Please log in to change your password.", "warning")
+        return redirect(url_for('login'))
+
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    if new_password != confirm_password:
+        flash("New password and confirm password do not match.", "error")
+        return redirect(url_for('profile'))
+
+    conn = connect_to_db()
+    if not conn:
+        flash("Database connection failed.", "error")
+        return redirect(url_for('profile'))
+
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT password FROM users WHERE email = %s", (session['user_email'],))
+        rec = cur.fetchone()
+        if rec and rec[0] == current_password:  # NOTE: use hashing in production!
+            cur.execute("UPDATE users SET password = %s WHERE email = %s",
+                        (new_password, session['user_email']))
+            conn.commit()
+            flash("Password changed successfully!", "success")
+        else:
+            flash("Incorrect current password.", "error")
+    except Error as e:
+        print(f"Error changing password: {e}")
+        flash("Failed to change password.", "error")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for('profile'))
+
+# -------------------------------------------------------------------
+# Products & Cart
+# -------------------------------------------------------------------
+@app.route('/add_product', methods=['GET', 'POST'])
+def add_product():
+    if not session.get('is_admin'):
+        if request.accept_mimetypes.accept_json:
+            return jsonify({'success': False, 'message': 'Admins only.'}), 403
+        flash("Unauthorized. Admins only.", "warning")
+        return redirect(url_for('login'))
+
     if request.method == 'POST':
         try:
-            name = request.form.get('name')
-            email = request.form.get('email')
-            password = request.form.get('password')
+            name = request.form['name']
+            category = request.form['category']
+            rating = float(request.form['rating'])
+            price = float(request.form['price'])
+            description = request.form['description']
+            image_file = request.files.get('image')
+            image_url = None
+
+            if image_file and image_file.filename:
+                filename = secure_filename(image_file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image_file.save(file_path)
+                image_url = f'img/Products/{filename}'
+
             conn = connect_to_db()
             if not conn:
-                flash("Database connection failed.", "error")
-                return redirect(url_for('signup')) # Redirect back to signup page
-
-            cursor = conn.cursor()
-            # Check if email already exists
-            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-            if cursor.fetchone():
-                flash("Email already registered.", "error")
-                return render_template('login.html') # Render signup template to show error
-            
-            # Insert into users
-            cursor.execute("""
-                INSERT INTO users (name, email, password)
-                VALUES (%s, %s, %s)
-            """, (name, email, password))
+                return jsonify({'success': False, 'message': 'DB connection failed.'}), 500
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO products (name, category, rating, price, description, image_url, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (name, category, rating, price, description, image_url, session.get('user_email', 'unknown')))
             conn.commit()
-            flash("Signup successful. Please log in.", "success")
-            return redirect(url_for('login'))
+            cur.close()
+            conn.close()
+            return jsonify({'success': True, 'message': 'Product added successfully!'})
         except Exception as e:
-            print(f"❌ Signup error: {e}")
-            flash("Signup failed due to a server error.", "error")
-            return render_template('login.html') # Render signup template to show error
-        finally:
-            if conn:
-                cursor.close()
-                conn.close()
-    return render_template('login.html') # For GET request to display the signup form
+            print(f"Add product error: {e}")
+            return jsonify({'success': False, 'message': 'Error adding product.'}), 500
 
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    session.pop('is_admin', None) # Also remove is_admin from session
-    flash("You have been logged out.", "info")
-    return redirect(url_for('index'))
-
-@app.route('/forgot_password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form['email']
-        conn = connect_to_db()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
-
-        if user:
-            # generate a temporary password
-            temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-
-            # update DB
-            cursor.execute("UPDATE users SET password = %s WHERE email = %s", (temp_password, email))
-            conn.commit()
-
-            flash(f"Your temporary password is: {temp_password}", "success")
-            flash("Please login with this password and change it in your profile.", "info")
-            return redirect(url_for('login'))
-        else:
-            flash("Email not found in our records.", "danger")
-
-    return render_template('forgot_password.html')
+    return render_template('add_product.html')
 
 @app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
-    # Authorization check using session['is_admin']
     if not session.get('is_admin'):
-        flash("Unauthorized access. Only administrators can edit products.", "warning")
+        flash("Unauthorized. Admins only.", "warning")
         return redirect(url_for('index'))
 
     conn = connect_to_db()
     if not conn:
         flash("Database connection failed.")
         return redirect(url_for('index'))
-    cursor = conn.cursor()
+    cur = conn.cursor()
 
     if request.method == 'POST':
         name = request.form['name']
@@ -259,7 +618,6 @@ def edit_product(product_id):
         category = request.form['category']
         price = request.form['price']
         rating = request.form['rating']
-        
         image_file = request.files.get('image')
         image_url = None
         if image_file and image_file.filename:
@@ -267,485 +625,226 @@ def edit_product(product_id):
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             image_file.save(image_path)
             image_url = f'img/Products/{filename}'
-
         try:
             if image_url:
-                cursor.execute("""
+                cur.execute("""
                     UPDATE products
-                    SET name = %s, description = %s, category = %s, price = %s, rating = %s, image_url = %s
-                    WHERE id = %s
+                       SET name=%s, description=%s, category=%s, price=%s, rating=%s, image_url=%s
+                     WHERE id=%s
                 """, (name, description, category, price, rating, image_url, product_id))
             else:
-                cursor.execute("""
+                cur.execute("""
                     UPDATE products
-                    SET name = %s, description = %s, category = %s, price = %s, rating = %s
-                    WHERE id = %s
+                       SET name=%s, description=%s, category=%s, price=%s, rating=%s
+                     WHERE id=%s
                 """, (name, description, category, price, rating, product_id))
             conn.commit()
-            flash("Product updated successfully!", "success")
+            flash("Product updated!", "success")
             return redirect(url_for('index'))
         except Exception as e:
-            print(f"❌ Update error: {e}")
+            print(f"Update product error: {e}")
             flash("Error updating product.", "error")
             return redirect(url_for('index'))
         finally:
-            cursor.close()
+            cur.close()
             conn.close()
-    
-    # GET request: Fetch product details
+
     try:
-        cursor.execute("SELECT id, name, description, category, price, rating, image_url FROM products WHERE id = %s", (product_id,))
-        row = cursor.fetchone()
+        cur.execute("SELECT id, name, description, category, price, rating, image_url FROM products WHERE id = %s", (product_id,))
+        row = cur.fetchone()
         if not row:
             flash("Product not found.", "warning")
             return redirect(url_for('index'))
         product = {
-            'id': row[0],
-            'name': row[1],
-            'description': row[2],
-            'category': row[3],
-            'price': float(row[4]),
-            'rating': float(row[5]) if row[5] else None,
-            'image_url': row[6]
+            'id': row[0], 'name': row[1], 'description': row[2], 'category': row[3],
+            'price': float(row[4]), 'rating': float(row[5]) if row[5] else None, 'image_url': row[6]
         }
         return render_template('edit_product.html', product=product)
     except Exception as e:
-        print(f"❌ Fetch error: {e}")
-        flash("Error fetching product for editing.", "error")
+        print(f"Fetch product error: {e}")
+        flash("Error fetching product.", "error")
         return redirect(url_for('index'))
     finally:
-        cursor.close()
+        cur.close()
         conn.close()
 
 @app.route('/delete_product/<int:product_id>', methods=['POST'])
 def delete_product(product_id):
-    # Authorization check using session['is_admin']
     if not session.get('is_admin'):
-        flash("Unauthorized access. Only administrators can delete products.", "warning")
+        flash("Unauthorized. Admins only.", "warning")
         return redirect(url_for('index'))
 
     conn = connect_to_db()
     if conn:
         try:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+            cur = conn.cursor()
+            cur.execute("DELETE FROM products WHERE id = %s", (product_id,))
             conn.commit()
-            flash("Product deleted successfully!", "success")
+            flash("Product deleted!", "success")
         except Error as e:
-            print(f"Error deleting product: {e}")
+            print(f"Delete product error: {e}")
             flash("Error deleting product.", "error")
         finally:
             conn.close()
         return redirect(url_for('index'))
     flash("Database connection failed.", "error")
     return "Database connection failed", 500
-# ... (your existing imports and app setup) ...
-
-# Profile route (already exists, but showing context)
-@app.route('/profile')
-def profile():
-    if 'user' in session:
-        # You need to fetch user details to pre-fill the form
-        conn = connect_to_db()
-        user_details = {
-            'name': 'Not provided',
-            'email': session['user'], # Use the email from session
-            'address': 'Not provided',
-            'phone': 'Not provided'
-        }
-        user_orders = [] # Initialize as empty
-        if conn:
-            try:
-                cursor = conn.cursor()
-                # Fetch user details (example - you'll need a users table for full details)
-                cursor.execute("SELECT name, email FROM users WHERE email = %s", (session['user'],))
-                user_record = cursor.fetchone()
-                if user_record:
-                    user_details['name'] = user_record[0]
-                    # Assuming you might have more columns like address, phone in users table
-                    # user_details['address'] = user_record[2]
-                    # user_details['phone'] = user_record[3]
-
-                # Fetch user orders (example - you'll need orders and order_items tables)
-                # This is a placeholder; you'll need to adapt it to your DB schema
-                # cursor.execute("SELECT id, order_date, status, total_amount FROM orders WHERE user_email = %s ORDER BY order_date DESC", (session['user'],))
-                # orders_data = cursor.fetchall()
-                # for order_row in orders_data:
-                #     order_id = order_row[0]
-                #     order_items = []
-                #     cursor.execute("SELECT product_name, quantity, price_at_purchase, image_url FROM order_items WHERE order_id = %s", (order_id,))
-                #     items_data = cursor.fetchall()
-                #     for item_row in items_data:
-                #         order_items.append({
-                #             'product_name': item_row[0],
-                #             'quantity': item_row[1],
-                #             'price_at_purchase': float(item_row[2]),
-                #             'image_url': item_row[3]
-                #         })
-                #     user_orders.append({
-                #         'id': order_id,
-                #         'order_date': order_row[1].strftime('%Y-%m-%d'), # Format date
-                #         'status': order_row[2],
-                #         'total_amount': float(order_row[3]),
-                #         'items': order_items
-                #     })
-
-            except Error as e:
-                print(f"Error fetching profile data: {e}")
-                flash("Error loading profile data.", "error")
-            finally:
-                conn.close()
-
-        return render_template('profile.html', user=user_details['name'], user_details=user_details, user_orders=user_orders) # Pass user_details and user_orders
-    else:
-        flash("Please log in to view your profile.", "info")
-        return redirect(url_for('login'))
-
-# NEW ROUTE: For updating personal details
-@app.route('/update_profile', methods=['POST'])
-def update_profile():
-    if 'user' not in session:
-        flash("Please log in to update your profile.", "warning")
-        return redirect(url_for('login'))
-
-    if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email') # Assuming email can be updated, make sure it's unique
-        address = request.form.get('address')
-        phone = request.form.get('phone')
-
-        conn = connect_to_db()
-        if not conn:
-            flash("Database connection failed.", "error")
-            return redirect(url_for('profile'))
-        
-        cur = conn.cursor()
-        try:
-            # Update user details in the database
-            # IMPORTANT: Adapt this query to your 'users' table schema
-            cur.execute("""
-                UPDATE users
-                SET name = %s, email = %s, address = %s, phone = %s
-                WHERE email = %s
-            """, (name, email, address, phone, session['user'])) # Update based on current session email
-            
-            conn.commit()
-            
-            # If email was updated, update the session as well
-            session['user'] = email 
-            
-            flash("Profile updated successfully!", "success")
-            return redirect(url_for('profile'))
-        except Error as e:
-            print(f"Error updating profile: {e}")
-            flash("Failed to update profile.", "error")
-            return redirect(url_for('profile'))
-        finally:
-            cur.close()
-            conn.close()
-
-# NEW ROUTE: For changing password
-@app.route('/change_password', methods=['POST'])
-def change_password():
-    if 'user' not in session:
-        flash("Please log in to change your password.", "warning")
-        return redirect(url_for('login'))
-
-    if request.method == 'POST':
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
-
-        if new_password != confirm_password:
-            flash("New password and confirm password do not match.", "error")
-            return redirect(url_for('profile'))
-
-        conn = connect_to_db()
-        if not conn:
-            flash("Database connection failed.", "error")
-            return redirect(url_for('profile'))
-        
-        cur = conn.cursor()
-        try:
-            # First, verify current password (IMPORTANT: You should be hashing passwords!)
-            cur.execute("SELECT password FROM users WHERE email = %s", (session['user'],))
-            user_record = cur.fetchone()
-
-            if user_record and user_record[0] == current_password: # In real app, use password hashing (e.g., bcrypt)
-                cur.execute("UPDATE users SET password = %s WHERE email = %s", (new_password, session['user']))
-                conn.commit()
-                flash("Password changed successfully!", "success")
-            else:
-                flash("Incorrect current password.", "error")
-            
-            return redirect(url_for('profile'))
-        except Error as e:
-            print(f"Error changing password: {e}")
-            flash("Failed to change password.", "error")
-            return redirect(url_for('profile'))
-        finally:
-            cur.close()
-            conn.close()
-
-@app.route('/add_product', methods=['GET', 'POST'])
-def add_product():
-    if not session.get('is_admin'):
-        if request.accept_mimetypes.accept_json:
-            return jsonify({'success': False, 'message': 'Unauthorized access. Only administrators can add products.'}), 403
-        else:
-            flash("Unauthorized access. Only administrators can add products.", "warning")
-            return redirect(url_for('login'))
-    if request.method == 'POST':
-        try:
-            name = request.form['name']
-            category = request.form['category']
-            rating = request.form['rating']
-            price = request.form['price']
-            description = request.form['description']
-            image_file = request.files.get('image')
-            filename = None
-            image_url = None
-            if image_file and image_file.filename:
-                filename = secure_filename(image_file.filename)
-                # Define a subdirectory for product images, if desired
-                product_image_dir = os.path.join(app.config['UPLOAD_FOLDER'])
-                os.makedirs(product_image_dir, exist_ok=True) # Ensure directory exists
-                file_path = os.path.join(product_image_dir, filename)
-                image_file.save(file_path)
-                print(f"DEBUG: Image saved to: {file_path}")
-                # Store the relative path from static, or full URL if served differently
-                image_url = f'img/Products/{filename}' # Correct relative path for static files
-            conn = connect_to_db()
-            if not conn:
-                return jsonify({'success': False, 'message': 'Database connection failed during product addition.'}), 500
-            cur = conn.cursor()
-            cur.execute('''
-                INSERT INTO products (name, category, rating, price, description, image_url, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ''', (name, category, float(rating), float(price), description, image_url, session.get('user', 'unknown')))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'success': True, 'message': 'Product added successfully!'})
-        except KeyError as e:
-            return jsonify({'success': False, 'message': f'Missing form data: {e}. Please ensure all fields are filled.'}), 400
-        except ValueError as e:
-            return jsonify({'success': False, 'message': f'Error in data format: {e}. Please check price and rating.'}), 400
-        except Error as e:
-            print(f"❌ Database error during product insertion: {e}")
-            return jsonify({'success': False, 'message': f'Database error: Could not add product. {e}'}), 500
-    else:
-        return render_template('add_product.html')
-
-# In your main.py
 
 @app.route('/product/<int:product_id>', methods=['GET', 'POST'])
 def product_detail(product_id):
     conn = connect_to_db()
-    product = None
-    reviews = []
-    user_review = None # To pre-fill if user has already reviewed
-
-    if conn:
-        try:
-            cursor = conn.cursor()
-
-            # Fetch product details
-            cursor.execute("SELECT id, name, description, category, price, rating, image_url FROM products WHERE id = %s", (product_id,))
-            row = cursor.fetchone()
-            if row:
-                product = {
-                    'id': row[0],
-                    'name': row[1],
-                    'description': row[2],
-                    'category': row[3],
-                    'price': float(row[4]),
-                    'rating': float(row[5]) if row[5] else None,
-                    'image_url': row[6]
-                }
-            else:
-                flash("Product not found.", "warning")
-                return redirect(url_for('index'))
-
-            # Handle new review submission (if POST request)
-            if request.method == 'POST':
-                if 'user' not in session:
-                    flash("Please log in to submit a review.", "warning")
-                    return redirect(url_for('login'))
-
-                # Assuming you store user's actual ID in session['user_id'] during login/signup
-                # For now, let's get the user ID from the database using username
-                current_username = session['user']
-                cursor.execute("SELECT id FROM users WHERE name = %s", (current_username,))
-                user_record = cursor.fetchone()
-                current_user_id = user_record[0] if user_record else None
-
-                rating = request.form.get('rating', type=int)
-                comment = request.form.get('comment')
-
-                if not rating or not comment:
-                    flash("Please provide both a rating and a comment.", "error")
-                elif rating < 1 or rating > 5:
-                    flash("Rating must be between 1 and 5.", "error")
-                else:
-                    # Check if user has already reviewed this product
-                    cursor.execute("SELECT id FROM reviews WHERE product_id = %s AND user_id = %s", (product_id, current_user_id))
-                    existing_review = cursor.fetchone()
-
-                    if existing_review:
-                        # Update existing review
-                        cursor.execute("UPDATE reviews SET rating = %s, comment = %s, created_at = CURRENT_TIMESTAMP WHERE id = %s",
-                                       (rating, comment, existing_review[0]))
-                        flash("Your review has been updated!", "success")
-                    else:
-                        # Insert new review
-                        cursor.execute("INSERT INTO reviews (product_id, user_id, username, rating, comment) VALUES (%s, %s, %s, %s, %s)",
-                                       (product_id, current_user_id, current_username, rating, comment))
-                        flash("Thank you for your review!", "success")
-                    conn.commit()
-                    # Redirect to GET to prevent form resubmission
-                    return redirect(url_for('product_detail', product_id=product_id))
-
-            # Fetch all reviews for the product (after potential new submission)
-            cursor.execute("SELECT username, rating, comment, created_at FROM reviews WHERE product_id = %s ORDER BY created_at DESC", (product_id,))
-            reviews_data = cursor.fetchall()
-            for r in reviews_data:
-                reviews.append({
-                    'username': r[0],
-                    'rating': r[1],
-                    'comment': r[2],
-                    'created_at': r[3].strftime('%Y-%m-%d %H:%M') # Format datetime
-                })
-
-            # Check if current user has already reviewed for pre-filling the form
-            if 'user' in session:
-                current_username = session['user']
-                cursor.execute("SELECT rating, comment FROM reviews WHERE product_id = %s AND username = %s", (product_id, current_username))
-                user_review_data = cursor.fetchone()
-                if user_review_data:
-                    user_review = {'rating': user_review_data[0], 'comment': user_review_data[1]}
-
-
-        except Error as e:
-            print(f"Error fetching product or reviews: {e}")
-            flash("Error loading product details.", "error")
-            return redirect(url_for('index')) # Redirect to index on error
-        finally:
-            conn.close()
-    else:
+    if not conn:
         flash("Database connection failed.", "error")
-        return redirect(url_for('index')) # Redirect to index on error
+        return redirect(url_for('index'))
+
+    product, reviews, user_review = None, [], None
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, description, category, price, rating, image_url FROM products WHERE id = %s",
+                    (product_id,))
+        row = cur.fetchone()
+        if not row:
+            flash("Product not found.", "warning")
+            return redirect(url_for('index'))
+        product = {
+            'id': row[0], 'name': row[1], 'description': row[2], 'category': row[3],
+            'price': float(row[4]), 'rating': float(row[5]) if row[5] else None, 'image_url': row[6]
+        }
+
+        if request.method == 'POST':
+            if not session.get('user_email'):
+                flash("Please log in to submit a review.", "warning")
+                return redirect(url_for('login'))
+
+            cur.execute("SELECT id, name FROM users WHERE email = %s", (session['user_email'],))
+            u = cur.fetchone()
+            if not u:
+                flash("User not found.", "error")
+                return redirect(url_for('login'))
+            user_id, user_name = u[0], u[1]
+
+            rating = request.form.get('rating', type=int)
+            comment = request.form.get('comment')
+
+            if not rating or not comment:
+                flash("Provide both a rating and a comment.", "error")
+            elif rating < 1 or rating > 5:
+                flash("Rating must be between 1 and 5.", "error")
+            else:
+                cur.execute("SELECT id FROM reviews WHERE product_id = %s AND user_id = %s",
+                            (product_id, user_id))
+                existing = cur.fetchone()
+                if existing:
+                    cur.execute("""
+                        UPDATE reviews
+                           SET rating=%s, comment=%s, created_at=CURRENT_TIMESTAMP
+                         WHERE id=%s
+                    """, (rating, comment, existing[0]))
+                    flash("Your review has been updated!", "success")
+                else:
+                    cur.execute("""
+                        INSERT INTO reviews (product_id, user_id, username, rating, comment)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (product_id, user_id, user_name, rating, comment))
+                    flash("Thanks for your review!", "success")
+                conn.commit()
+                return redirect(url_for('product_detail', product_id=product_id))
+
+        cur.execute("""
+            SELECT username, rating, comment, created_at
+              FROM reviews
+             WHERE product_id = %s
+          ORDER BY created_at DESC
+        """, (product_id,))
+        for r in cur.fetchall():
+            reviews.append({
+                'username': r[0], 'rating': r[1], 'comment': r[2],
+                'created_at': r[3].strftime('%Y-%m-%d %H:%M')
+            })
+
+        if session.get('user_email'):
+            cur.execute("""
+                SELECT r.rating, r.comment
+                  FROM reviews r
+                  JOIN users u ON u.id = r.user_id
+                 WHERE r.product_id = %s AND u.email = %s
+            """, (product_id, session['user_email']))
+            ur = cur.fetchone()
+            if ur:
+                user_review = {'rating': ur[0], 'comment': ur[1]}
+
+    except Error as e:
+        print(f"product_detail error: {e}")
+        flash("Error loading product details.", "error")
+        return redirect(url_for('index'))
+    finally:
+        conn.close()
 
     return render_template('product_detail.html', product=product, reviews=reviews, user_review=user_review)
 
-@app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
+@app.route('/add_to_cart/<int:product_id>', methods=['POST', 'GET'])
 def add_to_cart(product_id):
-    if 'user' not in session:
+    if not session.get('user_email'):
         flash("Please log in to add items to your cart.", "warning")
         return redirect(url_for('login'))
+
     conn = connect_to_db()
     if conn:
         try:
-            cursor = conn.cursor()
-            # Crucially, fetch the image_url here too!
-            cursor.execute("SELECT name, price, image_url FROM products WHERE id = %s", (product_id,))
-            product = cursor.fetchone()
+            cur = conn.cursor()
+            cur.execute("SELECT name, price, image_url FROM products WHERE id = %s", (product_id,))
+            product = cur.fetchone()
             if product:
-                product_name = product[0]
-                product_price = float(product[1])
-                product_image_url = product[2] # Fetch the image_url
-                if 'cart' not in session:
-                    session['cart'] = []
-                found = False
-                for item in session['cart']:
+                name, price, image_url = product[0], float(product[1]), product[2]
+                cart = session.get('cart', [])
+                for item in cart:
                     if item['id'] == product_id:
                         item['quantity'] += 1
-                        found = True
                         break
-                if not found:
-                    session['cart'].append({
-                        'id': product_id,
-                        'name': product_name,
-                        'price': product_price,
-                        'quantity': 1,
-                        'image_url': product_image_url # Store image_url in session
-                    })
+                else:
+                    cart.append({'id': product_id, 'name': name, 'price': price,
+                                 'quantity': 1, 'image_url': image_url})
+                session['cart'] = cart
                 session.modified = True
-                flash(f"{product_name} added to cart!", "success")
+                flash(f"{name} added to cart!", "success")
             else:
                 flash("Product not found.", "error")
         except Error as e:
-            print(f"Error adding to cart: {e}")
+            print(f"Add to cart error: {e}")
             flash("Error adding product to cart.", "error")
         finally:
             conn.close()
     else:
-        flash("Database connection failed, cannot add to cart.", "error")
-    # Redirect directly to the cart page
+        flash("Database connection failed.", "error")
     return redirect(url_for('cart'))
-@app.route('/remove_from_cart/<int:product_id>', methods=['GET', 'POST'])
+
+@app.route('/remove_from_cart/<int:product_id>', methods=['POST', 'GET'])
 def remove_from_cart(product_id):
-    if 'user' not in session:
+    if not session.get('user_email'):
         flash("Please log in to manage your cart.", "warning")
         return redirect(url_for('login'))
-    if 'cart' in session:
-        session['cart'] = [item for item in session['cart'] if item['id'] != product_id]
-        session.modified = True
-        flash("Item removed from cart.", "info")
+    cart = session.get('cart', [])
+    cart = [i for i in cart if i['id'] != product_id]
+    session['cart'] = cart
+    session.modified = True
+    flash("Item removed from cart.", "info")
     return redirect(url_for('cart'))
 
 @app.route('/cart')
 def cart():
-    if 'cart' not in session or not session['cart']:
-        return render_template("cart.html", cart_items=[], total_price=0)
-
-    cart_items = session['cart']
+    cart_items = session.get('cart', [])
     total_price = sum(item['price'] * item['quantity'] for item in cart_items)
+    return render_template('cart.html', cart_items=cart_items, total_price=total_price)
 
-    # ✅ Create Razorpay Order (only if total_price > 0)
-    if total_price > 0:
-        order_data = {
-            "amount": total_price * 100,  # Razorpay expects amount in paise
-            "currency": "INR",
-            "payment_capture": 1
-        }
-        order = razorpay_client.order.create(order_data)
-        razorpay_order_id = order['id']
-    else:
-        razorpay_order_id = None
-
-    return render_template(
-        "cart.html",
-        cart_items=cart_items,
-        total_price=total_price,
-        razorpay_order_id=razorpay_order_id,
-        razorpay_key="rzp_live_R6wg6buSedSnTV"  # <-- replace with your actual key_id
-    )
-
-@app.route('/payment/success', methods=['POST'])
-def payment_success():
-    data = request.json
-    # You should verify signature here with razorpay utility
-    # Save transaction details to DB
-    return jsonify({"status": "success"})
-
-@app.route('/create_order', methods=['POST'])
-def create_order():
-    data = request.get_json()
-    amount = data['amount'] * 100  # in paise
-    order = client.order.create({
-        'amount': amount,
-        'currency': 'INR',
-        'payment_capture': 1
-    })
-    return jsonify(order)
-
-@app.route('/verify_payment', methods=['POST'])
-def verify_payment():
-    data = request.get_json()
-    try:
-        client.utility.verify_payment_signature(data)
-        return jsonify({"status": "success"})
-    except:
-        return jsonify({"status": "failed"}), 400
+# -------------------------------------------------------------------
+# Boot
+# -------------------------------------------------------------------
+if __name__ == '__main__':
+    conn = connect_to_db()
+    if conn:
+        create_users_table(conn)
+        create_products_table(conn)
+        create_reviews_table(conn)
+        conn.close()
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
