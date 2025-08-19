@@ -230,8 +230,6 @@ sudo systemctl restart nginx
 
 
 
-# GSpaces Web Application
-
 ## Table of Contents
 
 <!-- ... (Rest of your Table of Contents) ... -->
@@ -241,7 +239,7 @@ sudo systemctl restart nginx
     *   [File & Directory Permissions](#file--directory-permissions)
     *   [Nginx & Gunicorn Logs](#nginx--gunicorn-logs)
 
-## 5. Troubleshooting
+## Troubleshooting
 
 This section provides guidance on common issues encountered during deployment and operation, with a focus on file permissions.
 
@@ -346,3 +344,4 @@ Logs are your best friends for debugging.
     *   **Purpose:** Shows output from your Gunicorn process, including Python tracebacks for application errors, startup/shutdown messages, and any `print()` statements from your Flask app. Use this when Nginx reports a 502 Bad Gateway or when your application is crashing.
 
 ---
+
