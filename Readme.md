@@ -230,3 +230,119 @@ sudo systemctl restart nginx
 
 
 
+# GSpaces Web Application
+
+## Table of Contents
+
+<!-- ... (Rest of your Table of Contents) ... -->
+
+5.  [Troubleshooting](#troubleshooting)
+    *   [Common Issues & Solutions](#common-issues--solutions)
+    *   [File & Directory Permissions](#file--directory-permissions)
+    *   [Nginx & Gunicorn Logs](#nginx--gunicorn-logs)
+
+## 5. Troubleshooting
+
+This section provides guidance on common issues encountered during deployment and operation, with a focus on file permissions.
+
+### Common Issues & Solutions
+
+*   **"Not Found" (404) for `sitemap.xml`, `robots.txt`, or Static Files (CSS/JS/Images):**
+    *   **Cause:** Nginx cannot find the file where it expects it, or lacks permission to read it.
+    *   **Solution:**
+        1.  **Verify File Existence:** Ensure the file (`sitemap.xml`, `robots.txt`, or your static assets) is physically located in the correct directory on the server (e.g., `/home/ec2-user/gspaces/sitemap.xml` for `sitemap.xml`, `/home/ec2-user/gspaces/static/css/main.css` for a CSS file).
+        2.  **Check Nginx `root` Directive:** Ensure the `root` directive in your Nginx configuration points to the correct base directory of your project (`/home/ec2-user/gspaces/`).
+        3.  **Review Nginx `location` Blocks:** Verify that the `location` blocks for `/sitemap.xml`, `/robots.txt`, and `/static/` (if used) are correctly defined and point to the right places, and that their `try_files` directives are correct.
+        4.  **Check Permissions:** This is a very common cause. See [File & Directory Permissions](#file--directory-permissions) below.
+
+*   **"Permission denied" errors in Nginx logs:**
+    *   **Cause:** The Nginx user (commonly `nginx` or `www-data`) does not have the necessary read or execute permissions on a file or directory.
+    *   **Solution:** Adjust file and directory permissions. See [File & Directory Permissions](#file--directory-permissions) below.
+
+*   **"502 Bad Gateway" / "Connection refused" when accessing the app:**
+    *   **Cause:** Nginx cannot connect to your Gunicorn application.
+    *   **Solution:**
+        1.  **Check Gunicorn Status:** Ensure your Gunicorn service is running (`sudo systemctl status gspaces`).
+        2.  **Verify Socket Path:** Confirm the `proxy_pass` in Nginx (e.g., `http://unix:/home/ec2-user/gspaces/gspaces.sock;`) matches the `bind` path in your Gunicorn service file.
+        3.  **Socket Permissions:** Ensure the Gunicorn socket file (`gspaces.sock`) has permissions that allow Nginx to connect (e.g., `chmod 666` or ensure Nginx user is in the correct group).
+
+*   **"500 Internal Server Error" (after Flask code changes):**
+    *   **Cause:** An error within your Flask application code.
+    *   **Solution:** Check your Gunicorn service logs (`sudo journalctl -u gspaces.service -f`) for Python tracebacks.
+
+### File & Directory Permissions
+
+Incorrect file permissions are a frequent source of deployment issues. Nginx needs to be able to **read** files it serves and **execute** (traverse) directories leading to those files.
+
+**General Guidelines:**
+
+*   **Files:** `644` (owner read/write, group read, others read)
+*   **Directories:** `755` (owner read/write/execute, group read/execute, others read/execute)
+
+**How to Check and Fix:**
+
+1.  **Connect to your server via SSH.**
+2.  **Navigate to your project root:**
+    ```bash
+    cd /home/ec2-user/gspaces
+    ```
+
+3.  **Check and set permissions for critical files:**
+    *   **`robots.txt`:**
+        ```bash
+        ls -l robots.txt
+        sudo chmod 644 robots.txt
+        ```
+    *   **`sitemap.xml`:**
+        ```bash
+        ls -l sitemap.xml
+        sudo chmod 644 sitemap.xml
+        ```
+    *   **Static files (e.g., CSS, JS, images):**
+        ```bash
+        ls -l static/css/main.css # Check specific file
+        # To apply to all static files and directories (use with caution):
+        # sudo find static/ -type f -exec chmod 644 {} +
+        # sudo find static/ -type d -exec chmod 755 {} +
+        ```
+        (It's safer to apply `chmod 644` to individual static files and `chmod 755` to their containing directories as needed.)
+
+4.  **Check and set permissions for directories:**
+    Nginx needs `x` (execute) permission for "others" on every directory in the path leading to your files.
+
+    *   **Your project root (`gspaces` directory):**
+        ```bash
+        ls -ld /home/ec2-user/gspaces/
+        sudo chmod 755 /home/ec2-user/gspaces/
+        ```
+    *   **Your home directory (`ec2-user` directory):**
+        This is a common oversight. If `/home/ec2-user/` has restrictive permissions (e.g., `700`), Nginx cannot traverse into it.
+        ```bash
+        ls -ld /home/ec2-user/
+        sudo chmod 755 /home/ec2-user/
+        ```
+    *   **`static` directory (if you're serving static files via Nginx):**
+        ```bash
+        ls -ld static/
+        sudo chmod 755 static/
+        ```
+
+### Nginx & Gunicorn Logs
+
+Logs are your best friends for debugging.
+
+*   **Nginx Error Logs:**
+    *   **Location:** `/var/log/nginx/gspaces_error.log` (as defined in your Nginx config)
+    *   **Command:** `sudo tail -f /var/log/nginx/gspaces_error.log`
+    *   **Purpose:** Shows errors Nginx encounters, such as "permission denied," "no such file or directory," or issues connecting to Gunicorn. Check this first for any 404s on static files, sitemap, or robots.txt.
+
+*   **Nginx Access Logs:**
+    *   **Location:** `/var/log/nginx/gspaces_access.log` (as defined in your Nginx config)
+    *   **Command:** `sudo tail -f /var/log/nginx/gspaces_access.log`
+    *   **Purpose:** Shows all requests Nginx processes, along with their HTTP status codes. Useful for confirming if a request is even reaching Nginx and what status code it's returning (e.g., 200 OK, 404 Not Found, 500 Internal Server Error).
+
+*   **Gunicorn Service Logs:**
+    *   **Command:** `sudo journalctl -u gspaces.service -f`
+    *   **Purpose:** Shows output from your Gunicorn process, including Python tracebacks for application errors, startup/shutdown messages, and any `print()` statements from your Flask app. Use this when Nginx reports a 502 Bad Gateway or when your application is crashing.
+
+---
