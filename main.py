@@ -15,6 +15,10 @@ from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer
 import razorpay
+from flask import Flask
+import xml.etree.ElementTree as ET
+from datetime import datetime
+from flask import Flask, send_from_directory, redirect, url_for
 
 # Initialize Razorpay client
 razorpay_client = razorpay.Client(auth=("rzp_live_R6wg6buSedSnTV", "xeBC7q5tEirlDg4y4Tc3JEc3"))
@@ -880,10 +884,6 @@ def payment_success():
     # Save transaction details to DB
     return jsonify({"status": "success"})
 
-@app.route("/thankyou")
-def thankyou():
-    return render_template("thankyou.html")
-
 @app.route('/create_order', methods=['POST'])
 def create_order():
     data = request.get_json()
@@ -903,7 +903,24 @@ def verify_payment():
         return jsonify({"status": "success"})
     except:
         return jsonify({"status": "failed"}), 400
-    
+
+# --- NEW SECTION FOR LOCAL SITEMAP TESTING ---
+@app.route('/sitemap.xml')
+def serve_sitemap():
+    # Only serve the sitemap if in a development/testing environment
+    # In production, your web server (Nginx/Apache) should serve this directly.
+    # You might want to add a more robust check here, e.g., based on FLASK_ENV
+    if app.debug or os.environ.get('FLASK_ENV') == 'development': # Example check
+        # Assuming sitemap.xml is in the root directory of your project
+        return send_from_directory(app.root_path, 'sitemap.xml')
+    else:
+        # In production, redirect or return 404 if accessed via Flask
+        return redirect(url_for('static', filename='sitemap.xml'), code=301)
+        # Or simply:
+        # from flask import abort
+        # abort(404)
+# --- END NEW SECTION ---
+
 # -------------------------------------------------------------------
 # Boot
 # -------------------------------------------------------------------
@@ -913,5 +930,6 @@ if __name__ == '__main__':
         create_users_table(conn)
         create_products_table(conn)
         create_reviews_table(conn)
+        app.run(debug=True)
         conn.close()
     app.run(host='0.0.0.0', port=5000, debug=True)

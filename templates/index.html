@@ -4,15 +4,10 @@
 <html lang="en">
 
 <head>
-
   <meta charset="utf-8">
-
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-
   <title>GSpaces - Your Premium Desk Setups</title>
-
   <meta name="description" content="GSpaces offers premium desk setups, transforming empty spaces into dream workspaces. Discover ergonomic, minimalist, and executive solutions for work-from-home professionals and creators.">
-
   <meta name="keywords" content="GSpaces, desk setups, premium workspaces, ergonomic desks, minimalist desks, executive desks, home office, work from home, productivity, office furniture">
 
   <!-- Favicon -->
@@ -20,7 +15,6 @@
   <link href="{{ url_for('static', filename='img/apple-touch-icon.png') }}" rel="apple-touch-icon">
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com" rel="preconnect">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Mozilla+Text:wght@200..700&display=swap" rel="stylesheet">
@@ -35,6 +29,11 @@
 
   <!-- Main CSS File -->
   <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+
+  <!-- !!! IMPORTANT: THE CORRECT CANONICAL TAG FOR THIS PAGE !!! -->
+  <!-- This should dynamically output the full HTTPS URL of the current page -->
+  <link rel="canonical" href="https://gspaces.in{{ request.path if request.path != '/' else '/' }}" />
+
 </head>
 
 <body class="index-page ">
@@ -106,7 +105,7 @@
 
                 <img src="static/img/about-2.jpg" class="img-fluid rounded-4" alt="Cozy desk setup">
 
-                <a href="https://www.youtube.com/watch?v=YN_mZ67qpBQ" class="glightbox pulsating-play-btn"></a>
+                <a href="https://youtu.be/U7gP16TXE8w?si=s5nXSpjALnLEEx81" class="glightbox pulsating-play-btn"></a>
 
               </div>
 
