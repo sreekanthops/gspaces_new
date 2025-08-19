@@ -9,7 +9,7 @@ sudo yum install postgresql16 postgresql16-server postgresql16-contrib -y
 sudo yum install python3 python3-pip python3-venv git nginx -y
 sudo yum install -y nginx
 sudo amazon-linux-extras enable python3.8
-sudo pip3 install certbot certbot-nginx
+sudo pip3 install certbot certbot-nginx flask_mail authlib google-auth google-auth-oauthlib google-auth-httplib2 flask psycopg2-binary 
 sudo yum install cronie -y
 sudo systemctl enable crond
 sudo systemctl start crond
@@ -344,4 +344,5 @@ Logs are your best friends for debugging.
     *   **Purpose:** Shows output from your Gunicorn process, including Python tracebacks for application errors, startup/shutdown messages, and any `print()` statements from your Flask app. Use this when Nginx reports a 502 Bad Gateway or when your application is crashing.
 
 ---
+
 
