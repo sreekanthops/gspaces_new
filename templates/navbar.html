@@ -27,17 +27,18 @@
                     <a class="nav-link" href="{{ url_for('index') }}#contact">Contact</a>
                 </li>
             </ul>
-            <!-- In your templates/navbar.html -->
             <ul class="custom-navbar-cta navbar-nav mb-2 mb-md-0 ms-5">
-                <li><a class="nav-link" href="{{ url_for('cart') }}"><img src="{{ url_for('static', filename='img/cart.svg') }}" alt="Cart"></a></li>
+                <li>
+                    <a class="nav-link" href="{{ url_for('cart') }}">
+                        <img src="{{ url_for('static', filename='img/cart.svg') }}" alt="Cart">
+                        {% if cart_count > 0 %}
+                            <span class="badge bg-primary rounded-pill">{{ cart_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
                 <li><a class="nav-link" href="{{ url_for('profile') }}"><img src="{{ url_for('static', filename='img/user.svg') }}"></a></li>
             </ul>
         </div>
     </div>
 </nav>
-
-<!-- Top-right Profile Section (If kept fixed on every page) -->
-
-
-<!-- mobile-nav-toggle (if you still need to hide it visually) -->
 <i class="mobile-nav-toggle"></i>
