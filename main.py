@@ -791,18 +791,16 @@ def product_detail(product_id):
 # -------------------------------------------------------------------
 @app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
 def add_to_cart(product_id):
-    # Change 'user' to 'user_email' or 'user_id' based on what you actually set in session
-    if 'user_email' not in session: # <--- CHANGED THIS LINE
+    if 'user' not in session:
         flash("Please log in to add items to your cart.", "warning")
+        # Redirect to login, but store the current URL to redirect back after login
+        session['next_url'] = request.referrer or url_for('index')
         return redirect(url_for('login'))
     conn = connect_to_db()
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT name, price, image_url FROM products WHERE id = %s",
-                (product_id,)
-            )
+            cursor.execute("SELECT name, price, image_url FROM products WHERE id = %s", (product_id,))
             product = cursor.fetchone()
             if product:
                 product_name = product[0]
@@ -832,10 +830,12 @@ def add_to_cart(product_id):
             print(f"Error adding to cart: {e}")
             flash("Error adding product to cart.", "error")
         finally:
-            conn.close()
+            if conn: # Ensure conn is not None before closing
+                conn.close()
     else:
         flash("Database connection failed, cannot add to cart.", "error")
-    return redirect(url_for('cart'))
+    # Redirect back to the page the user came from
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['GET', 'POST'])
 def remove_from_cart(product_id):
