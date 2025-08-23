@@ -21,7 +21,7 @@ from datetime import datetime
 from flask import Flask, send_from_directory, redirect, url_for
 
 # Initialize Razorpay client
-razorpay_client = razorpay.Client(auth=("rzp_test_R8kjO6mYzobvGe", "GEyMn1xy9x8rLlBaKP7473lb"))
+razorpay_client = razorpay.Client(auth=("rzp_live_R6wg6buSedSnTV", "xeBC7q5tEirlDg4y4Tc3JEc3"))
 
 app = Flask(__name__) 
 
@@ -910,7 +910,7 @@ def cart():
         cart_items=cart_items,
         total_price=total_price,
         razorpay_order_id=razorpay_order_id,
-        razorpay_key="rzp_test_R8kjO6mYzobvGe"  # <-- replace with your actual key_id
+        razorpay_key="rzp_live_R6wg6buSedSnTV"  # <-- replace with your actual key_id
     )
     
 @app.context_processor
