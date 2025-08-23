@@ -694,6 +694,35 @@ def delete_product(product_id):
     flash("Database connection failed.", "error")
     return "Database connection failed", 500
 
+@app.route('/update_quantity/<int:product_id>/<string:action>', methods=['POST'])
+def update_quantity(product_id, action):
+    if 'user_email' not in session:
+        flash("Please log in to manage your cart.", "warning")
+        return redirect(url_for('login'))
+    if 'cart' not in session:
+        session['cart'] = []
+    item_found = False
+    for item in session['cart']:
+        if item['id'] == product_id:
+            item_found = True
+            if action == 'increase':
+                item['quantity'] += 1
+                flash(f"Quantity for {item['name']} increased.", "success")
+            elif action == 'decrease':
+                if item['quantity'] > 1:
+                    item['quantity'] -= 1
+                    flash(f"Quantity for {item['name']} decreased.", "info")
+                else:
+                    # If quantity is 1 and user clicks decrease, remove the item
+                    session['cart'] = [i for i in session['cart'] if i['id'] != product_id]
+                    flash(f"{item['name']} removed from cart.", "info")
+            session.modified = True
+            break
+    if not item_found:
+        flash("Product not found in cart.", "error")
+    # Redirect back to the cart page to show updated quantities
+    return redirect(url_for('cart'))
+    
 @app.route('/product/<int:product_id>', methods=['GET', 'POST'])
 def product_detail(product_id):
     conn = connect_to_db()
