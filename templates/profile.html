@@ -105,7 +105,6 @@
                         <a href="#personal-details" class="list-group-item list-group-item-action active" data-bs-toggle="list" role="tab">Personal Details</a>
                         <a href="#password-change" class="list-group-item list-group-item-action" data-bs-toggle="list" role="tab">Change Password</a>
                         <a href="#my-orders" class="list-group-item list-group-item-action" data-bs-toggle="list" role="tab">My Orders</a>
-                        <a href="#" class="list-group-item list-group-item-action disabled">Payment Methods (Coming Soon)</a>
                         <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
                     </div>
                 </div>
@@ -173,7 +172,7 @@
                                         </span>
                                     </div>
                                     <div class="order-items">
-                                        {% for item in order.items %}
+                                        {% for item in order.items() %}
                                             <div class="order-item">
                                                 <img src="{{ url_for('static', filename=item.image_url) if item.image_url else url_for('static', filename='img/placeholder.jpg') }}" alt="{{ item.product_name }}">
                                                 <div>
@@ -221,3 +220,4 @@
     </script>
 </body>
 </html>
+

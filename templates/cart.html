@@ -122,23 +122,38 @@
         "image": "{{ url_for('static', filename='img/logo.png') }}", // optional logo
         "order_id": "{{ razorpay_order_id }}", // generated from backend
         "handler": function (response){
-            // On successful payment
-            fetch("/payment/success", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(response)
-            }).then(res => res.json())
-              .then(data => {
-                  alert("Payment Successful!");
-                  window.location.href = "/thankyou";
-              });
+            // This function is called when the payment is successful
+            // Submit the Razorpay response to your backend for verification and order processing
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ url_for('payment_success') }}"; // Route to verify payment
+
+            // Add hidden inputs for Razorpay response
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'razorpay_payment_id';
+            input.value = response.razorpay_payment_id;
+            form.appendChild(input);
+
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'razorpay_order_id';
+            input.value = response.razorpay_order_id;
+            form.appendChild(input);
+
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'razorpay_signature';
+            input.value = response.razorpay_signature;
+            form.appendChild(input);
+
+            document.body.appendChild(form);
+            form.submit(); // This will submit the form to Flask, which then redirects
         },
         "prefill": {
             "name": "{{ session.get('username', '') }}",
             "email": "{{ session.get('user_email', '') }}",
-            "contact": "9999999999"
+            "contact": "7075077384"
         },
         "theme": {
             "color": "#3399cc"
@@ -153,3 +168,4 @@
 
 </body>
 </html>
+

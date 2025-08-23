@@ -29,7 +29,9 @@ CREATE TABLE public.order_items (
     order_id integer NOT NULL,
     product_id integer NOT NULL,
     quantity integer NOT NULL,
-    price_at_purchase numeric(10,2) NOT NULL
+    price_at_purchase numeric(10,2) NOT NULL,
+    product_name character varying(255),
+    image_url character varying(255)
 );
 
 
@@ -66,7 +68,10 @@ CREATE TABLE public.orders (
     user_id integer NOT NULL,
     order_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     total_amount numeric(10,2) NOT NULL,
-    status character varying(50) DEFAULT 'Pending'::character varying
+    status character varying(50) DEFAULT 'Pending'::character varying,
+    user_email character varying(255),
+    razorpay_order_id character varying(255) NOT NULL,
+    razorpay_payment_id character varying(255) NOT NULL
 );
 
 
@@ -251,7 +256,8 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 -- Data for Name: order_items; Type: TABLE DATA; Schema: public; Owner: sri
 --
 
-COPY public.order_items (id, order_id, product_id, quantity, price_at_purchase) FROM stdin;
+COPY public.order_items (id, order_id, product_id, quantity, price_at_purchase, product_name, image_url) FROM stdin;
+1	4	7	1	1.00	Green Wall Desk	img/Products/Screenshot_2025-08-16_at_10.48.06_PM.png
 \.
 
 
@@ -259,7 +265,8 @@ COPY public.order_items (id, order_id, product_id, quantity, price_at_purchase) 
 -- Data for Name: orders; Type: TABLE DATA; Schema: public; Owner: sri
 --
 
-COPY public.orders (id, user_id, order_date, total_amount, status) FROM stdin;
+COPY public.orders (id, user_id, order_date, total_amount, status, user_email, razorpay_order_id, razorpay_payment_id) FROM stdin;
+4	9	2025-08-23 18:57:13.961535	1.00	Completed	sri@gmail.com	order_R8sn2pwhlyf26d	pay_R8snF3eP1pNFcA
 \.
 
 
@@ -268,8 +275,8 @@ COPY public.orders (id, user_id, order_date, total_amount, status) FROM stdin;
 --
 
 COPY public.products (id, name, description, category, price, rating, image_url, created_by) FROM stdin;
-8	GlowSpace	A sleek minimalist desk with warm ambient lighting – where work meets inspirationexecutive	55000.0	4.0	img/Products/Screenshot_2025-08-16_at_10.53.22_PM.png	sri@gmail.com
-9	Scandi Minimal	Balanced simplicity with warm wood, neutral tones, and clutter-free design for a calming work vibe.	minimalist	35000.0	5.0	img/Products/f996ebea3a130d8dd1bb5b2f1f938455.jpgsri@gmail.com
+8	GlowSpace	A sleek minimalist desk with warm ambient lighting – where work meets inspiration	executive	55000.0	4.0	img/Products/Screenshot_2025-08-16_at_10.53.22_PM.png	sri@gmail.com
+9	Scandi Minimal	Balanced simplicity with warm wood, neutral tones, and clutter-free design for a calming work vibe.	minimalist	35000.0	5.0	img/Products/f996ebea3a130d8dd1bb5b2f1f938455.jpg	sri@gmail.com
 10	Neo Ergonomic Desk	Clean, modern workspace with an ergonomic chair, sleek desk, and fresh greenery for comfort and focus.	Ergonomic	58000.0	5.0	img/Products/DSC06916.jpg	sri@gmail.com
 11	Dual Harmony	A stylish side-by-side desk setup designed for couples who work, create, or study together. This shared workspace balances productivity with harmony.	couple	99000.0	5.0	img/Products/dualdesks_1.jpg	sri@gmail.com
 7	Green Wall Desk	A modern desk setup blending greenery with minimal design — perfect for focus and calm	ergonomic	1	4.0	img/Products/Screenshot_2025-08-16_at_10.48.06_PM.png	sri@gmail.com
@@ -306,14 +313,14 @@ COPY public.users (id, name, email, password, address, phone) FROM stdin;
 -- Name: order_items_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
 --
 
-SELECT pg_catalog.setval('public.order_items_id_seq', 1, false);
+SELECT pg_catalog.setval('public.order_items_id_seq', 1, true);
 
 
 --
 -- Name: orders_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
 --
 
-SELECT pg_catalog.setval('public.orders_id_seq', 1, false);
+SELECT pg_catalog.setval('public.orders_id_seq', 4, true);
 
 
 --
@@ -351,6 +358,22 @@ ALTER TABLE ONLY public.order_items
 
 ALTER TABLE ONLY public.orders
     ADD CONSTRAINT orders_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: orders orders_razorpay_order_id_key; Type: CONSTRAINT; Schema: public; Owner: sri
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_razorpay_order_id_key UNIQUE (razorpay_order_id);
+
+
+--
+-- Name: orders orders_razorpay_payment_id_key; Type: CONSTRAINT; Schema: public; Owner: sri
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_razorpay_payment_id_key UNIQUE (razorpay_payment_id);
 
 
 --
@@ -402,6 +425,14 @@ ALTER TABLE ONLY public.order_items
 
 
 --
+-- Name: orders orders_user_email_fkey; Type: FK CONSTRAINT; Schema: public; Owner: sri
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_user_email_fkey FOREIGN KEY (user_email) REFERENCES public.users(email);
+
+
+--
 -- Name: orders orders_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: sri
 --
 
@@ -428,3 +459,4 @@ ALTER TABLE ONLY public.reviews
 --
 -- PostgreSQL database dump complete
 --
+
