@@ -791,10 +791,8 @@ def product_detail(product_id):
 # -------------------------------------------------------------------
 @app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
 def add_to_cart(product_id):
-    if 'user' not in session:
+    if 'user_email' not in session: # <--- CHANGED THIS LINE
         flash("Please log in to add items to your cart.", "warning")
-        # Redirect to login, but store the current URL to redirect back after login
-        session['next_url'] = request.referrer or url_for('index')
         return redirect(url_for('login'))
     conn = connect_to_db()
     if conn:
@@ -839,7 +837,7 @@ def add_to_cart(product_id):
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['GET', 'POST'])
 def remove_from_cart(product_id):
-    if 'user' not in session:
+    if 'user_email' not in session: # <--- CHANGED THIS LINE
         flash("Please log in to manage your cart.", "warning")
         return redirect(url_for('login'))
 
