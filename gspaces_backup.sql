@@ -2,13 +2,12 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 17.5
--- Dumped by pg_dump version 17.5
+-- Dumped from database version 16.9
+-- Dumped by pg_dump version 16.9
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -269,7 +268,14 @@ COPY public.orders (id, user_id, order_date, total_amount, status) FROM stdin;
 --
 
 COPY public.products (id, name, description, category, price, rating, image_url, created_by) FROM stdin;
-5	test	test	Executive	55.0	4.0	img/Products/f996ebea3a130d8dd1bb5b2f1f938455.jpg	sri
+8	GlowSpace	A sleek minimalist desk with warm ambient lighting – where work meets inspirationexecutive	55000.0	4.0	img/Products/Screenshot_2025-08-16_at_10.53.22_PM.png	sri@gmail.com
+9	Scandi Minimal	Balanced simplicity with warm wood, neutral tones, and clutter-free design for a calming work vibe.	minimalist	35000.0	5.0	img/Products/f996ebea3a130d8dd1bb5b2f1f938455.jpgsri@gmail.com
+10	Neo Ergonomic Desk	Clean, modern workspace with an ergonomic chair, sleek desk, and fresh greenery for comfort and focus.	Ergonomic	58000.0	5.0	img/Products/DSC06916.jpg	sri@gmail.com
+11	Dual Harmony	A stylish side-by-side desk setup designed for couples who work, create, or study together. This shared workspace balances productivity with harmony.	couple	99000.0	5.0	img/Products/dualdesks_1.jpg	sri@gmail.com
+7	Green Wall Desk	A modern desk setup blending greenery with minimal design — perfect for focus and calm	ergonomic	1	4.0	img/Products/Screenshot_2025-08-16_at_10.48.06_PM.png	sri@gmail.com
+12	Neon Dreamscape	The vibrant blue illumination and geometric wall panels create a dynamic and stylish space, ideal for both high-energy gaming and creative endeavors.	gaming	75000.0	4.0	img/Products/Screenshot_2025-08-19_at_4.35.56_AM.png	srichityala501@gmail.com
+13	Serene Balcony Nook	Designed for tranquility and concentration, this balcony workspace combines natural light and simple decor to offer a peaceful retreat for daily tasks	balcony	38000.0	5.0	img/Products/balcony.jpg	srichityala501@gmail.com
+14	Minimalist Balcony	Featuring clean lines, neutral tones, and essential elements, this design maximizes a compact balcony to create an efficient and aesthetically pleasing remote work	balcony	32000.0	5.0	img/Products/972b8295b1e88af3a3389a606f900d78.jpg	srichityala501@gmail.com
 \.
 
 
@@ -278,6 +284,7 @@ COPY public.products (id, name, description, category, price, rating, image_url,
 --
 
 COPY public.reviews (id, product_id, user_id, username, rating, comment, created_at) FROM stdin;
+1	7	\N	sri@gmail.com	5	Very comfortable 	2025-08-16 17:41:13.894303
 \.
 
 
@@ -287,6 +294,11 @@ COPY public.reviews (id, product_id, user_id, username, rating, comment, created
 
 COPY public.users (id, name, email, password, address, phone) FROM stdin;
 9	sri	sri@gmail.com	sri	\N	\N
+10	Syed Ahmed	syed.ahmed8801302@gmail.com	aTNkZUoq	\N	\N
+11	syed	syed@gmail.com	syed	\N	\N
+12	Home	sri.chityala504@gmail.com		\N	\N
+13	Sri ch	sri.chityala500@gmail.com	hello	\N	\N
+14	chityala srikanth	srichityala501@gmail.com		\N	\N
 \.
 
 
@@ -308,21 +320,21 @@ SELECT pg_catalog.setval('public.orders_id_seq', 1, false);
 -- Name: products_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
 --
 
-SELECT pg_catalog.setval('public.products_id_seq', 5, true);
+SELECT pg_catalog.setval('public.products_id_seq', 14, true);
 
 
 --
 -- Name: reviews_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
 --
 
-SELECT pg_catalog.setval('public.reviews_id_seq', 1, false);
+SELECT pg_catalog.setval('public.reviews_id_seq', 1, true);
 
 
 --
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: sri
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 9, true);
+SELECT pg_catalog.setval('public.users_id_seq', 14, true);
 
 
 --

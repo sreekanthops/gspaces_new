@@ -1,15 +1,2 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://gspaces.in/</loc>
-    <lastmod>2025-07-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://gspaces.in/contact</loc>
-    <lastmod>2025-07-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-</urlset>
+<?xml version='1.0' encoding='utf-8'?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://gspaces.in/</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/add_product</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/auth/callback</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/cart</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/forgot_password</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/google_signin</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/login</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/login/google</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/logout</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/privacy</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/profile</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/refund</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/shipping</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/signup</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url><url><loc>https://gspaces.in/terms</loc><lastmod>2025-08-19</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url></urlset>

@@ -4,4 +4,6 @@ Disallow: /craps/
 Disallow: /uono-board-poker*
 Disallow: /game-big-poker*
 Disallow: /*.shtml$
-Disallow: /*.html$
+Disallow: /*.html$  # Reconsider keeping this if you want these pages indexed
+
+Sitemap: https://gspaces.in/sitemap.xml
