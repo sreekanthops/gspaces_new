@@ -21,7 +21,7 @@ from datetime import datetime
 from flask import Flask, send_from_directory, redirect, url_for
 
 # Initialize Razorpay client
-razorpay_client = razorpay.Client(auth=("rzp_live_R6wg6buSedSnTV", "xeBC7q5tEirlDg4y4Tc3JEc3"))
+razorpay_client = razorpay.Client(auth=("rzp_test_R8kjO6mYzobvGe", "GEyMn1xy9x8rLlBaKP7473lb"))
 
 app = Flask(__name__) 
 
@@ -722,7 +722,7 @@ def update_quantity(product_id, action):
         flash("Product not found in cart.", "error")
     # Redirect back to the cart page to show updated quantities
     return redirect(url_for('cart'))
-    
+
 @app.route('/product/<int:product_id>', methods=['GET', 'POST'])
 def product_detail(product_id):
     conn = connect_to_db()
@@ -910,7 +910,7 @@ def cart():
         cart_items=cart_items,
         total_price=total_price,
         razorpay_order_id=razorpay_order_id,
-        razorpay_key="rzp_live_R6wg6buSedSnTV"  # <-- replace with your actual key_id
+        razorpay_key="rzp_test_R8kjO6mYzobvGe"  # <-- replace with your actual key_id
     )
     
 @app.context_processor
