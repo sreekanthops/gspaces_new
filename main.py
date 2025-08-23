@@ -839,24 +839,34 @@ def add_to_cart(product_id):
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['GET', 'POST'])
 def remove_from_cart(product_id):
-    # Change 'user' to 'user_email' or 'user_id' based on what you actually set in session
-    if 'user_email' not in session: # <--- CHANGED THIS LINE
+    if 'user' not in session:
         flash("Please log in to manage your cart.", "warning")
         return redirect(url_for('login'))
+
     if 'cart' in session:
+        original_cart_length = len(session['cart'])
         session['cart'] = [item for item in session['cart'] if item['id'] != product_id]
-        session.modified = True
-        flash("Item removed from cart.", "info")
+        new_cart_length = len(session['cart'])
+
+        if new_cart_length < original_cart_length:
+            session.modified = True
+            flash("Item removed from cart.", "info")
+        else:
+            # Item was not found in the cart
+            flash("Item not found in your cart.", "warning")
+            session.modified = True # Still good practice to mark as modified even if no change, if you want consistency
+
+    else:
+        flash("Your cart is already empty.", "info")
+
     return redirect(url_for('cart'))
 
-@app.route('/cart')
+@app.route('/cart') 
 def cart():
     if 'cart' not in session or not session['cart']:
         return render_template("cart.html", cart_items=[], total_price=0)
-
     cart_items = session['cart']
     total_price = sum(item['price'] * item['quantity'] for item in cart_items)
-
     # ✅ Create Razorpay Order (only if total_price > 0)
     if total_price > 0:
         order_data = {
@@ -868,7 +878,6 @@ def cart():
         razorpay_order_id = order['id']
     else:
         razorpay_order_id = None
-
     return render_template(
         "cart.html",
         cart_items=cart_items,
@@ -876,7 +885,13 @@ def cart():
         razorpay_order_id=razorpay_order_id,
         razorpay_key="rzp_live_R6wg6buSedSnTV"  # <-- replace with your actual key_id
     )
-
+    
+@app.context_processor
+def inject_cart_count():
+    cart_items = session.get('cart', [])
+    total_quantity = sum(item['quantity'] for item in cart_items)
+    return dict(cart_count=total_quantity)
+    
 @app.route('/payment/success', methods=['POST'])
 def payment_success():
     data = request.json
