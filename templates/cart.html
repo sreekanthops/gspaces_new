@@ -72,7 +72,16 @@
                             <div class="cart-item-details">
                                 <h5>{{ item.name }}</h5>
                                 <p class="mb-1">Price: ₹{{ item.price|inr }}</p>
-                                <p class="mb-0">Quantity: {{ item.quantity }}</p>
+                                <div class="d-flex align-items-center">
+                                    <p class="mb-0 me-2">Quantity:</p>
+                                    <form action="{{ url_for('update_quantity', product_id=item.id, action='decrease') }}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">-</button>
+                                    </form>
+                                    <span class="mx-2">{{ item.quantity }}</span>
+                                    <form action="{{ url_for('update_quantity', product_id=item.id, action='increase') }}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">+</button>
+                                    </form>
+                                </div>
                             </div>
                             <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="btn btn-sm btn-outline-danger">Remove</a>
                         </div>
