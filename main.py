@@ -4,7 +4,7 @@ import string
 import psycopg2
 from psycopg2 import Error
 from psycopg2.extras import RealDictCursor # Import RealDictCursor
-
+from flask_login import login_required, current_user
 # Flask imports
 from flask import (
     Flask, render_template, request, redirect, url_for, flash,
@@ -948,195 +948,207 @@ def product_detail(product_id):
     return render_template('product_detail.html', product=product, reviews=reviews, user_review=user_review)
 
 
-@app.route('/add_to_cart/<int:product_id>', methods=['GET', 'POST'])
-@login_required # Requires login to add to cart
+@app.route("/add_to_cart/<int:product_id>", methods=["POST", "GET"])
+@login_required
 def add_to_cart(product_id):
+    try:
+        conn = connect_to_db()
+        cur = conn.cursor()
+
+        # Check if product already exists in cart
+        cur.execute(
+            "SELECT quantity FROM cart WHERE user_id = %s AND product_id = %s",
+            (current_user.id, product_id)
+        )
+        row = cur.fetchone()
+
+        if row:
+            # If exists → increment quantity
+            cur.execute(
+                "UPDATE cart SET quantity = quantity + 1 WHERE user_id = %s AND product_id = %s",
+                (current_user.id, product_id)
+            )
+        else:
+            # If not exists → insert new row
+            cur.execute(
+                "INSERT INTO cart (user_id, product_id, quantity) VALUES (%s, %s, %s)",
+                (current_user.id, product_id, 1)
+            )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        flash("Product added to cart.")
+    except Exception as e:
+        flash(f"Error adding product to cart: {str(e)}")
+
+    return redirect(url_for("cart"))
+
+@app.route('/remove_from_cart/<int:product_id>', methods=['POST', 'GET'])
+@login_required
+def remove_from_cart(product_id):
     conn = connect_to_db()
     if conn:
         try:
-            cursor = conn.cursor(cursor_factory=RealDictCursor) # Use RealDictCursor
-            cursor.execute(
-                "SELECT name, price, image_url FROM products WHERE id = %s",
-                (product_id,)
-            )
-            product = cursor.fetchone() # Fetch as dict
-            if product:
-                # Store product details in cart session (Python dict)
-                if 'cart' not in session:
-                    session['cart'] = []
-                found = False
-                for item in session['cart']:
-                    if item['id'] == product_id:
-                        item['quantity'] += 1
-                        found = True
-                        break
-                if not found:
-                    session['cart'].append({
-                        'id': product_id,
-                        'name': product['name'],
-                        'price': float(product['price']), # Ensure price is float
-                        'quantity': 1,
-                        'image_url': product['image_url']
-                    })
-                session.modified = True
-                flash(f"{product['name']} added to cart!", "success")
-            else:
-                flash("Product not found.", "error")
-        except Error as e:
-            print(f"Error adding to cart: {e}")
-            flash("Error adding product to cart.", "error")
-        finally:
-            if conn:
-                conn.close()
-    else:
-        flash("Database connection failed, cannot add to cart.", "error")
-    return redirect(request.referrer or url_for('index')) # Redirect back to where they came from
-
-@app.route('/remove_from_cart/<int:product_id>', methods=['GET', 'POST'])
-@login_required # Requires login to modify cart
-def remove_from_cart(product_id):
-    if 'cart' in session:
-        original_cart_length = len(session['cart'])
-        session['cart'] = [item for item in session['cart'] if item['id'] != product_id]
-        new_cart_length = len(session['cart'])
-
-        if new_cart_length < original_cart_length:
-            session.modified = True
+            cur = conn.cursor()
+            cur.execute("DELETE FROM cart WHERE user_id=%s AND product_id=%s", (current_user.id, product_id))
+            conn.commit()
             flash("Item removed from cart.", "info")
-        else:
-            flash("Item not found in your cart.", "warning")
-            session.modified = True # Good practice to mark as modified even if no change
-
-    else:
-        flash("Your cart is already empty.", "info")
-
+        except Exception as e:
+            print(f"Error removing from cart: {e}")
+            flash("Error removing product from cart.", "error")
+        finally:
+            conn.close()
     return redirect(url_for('cart'))
+
 
 @app.route('/update_quantity/<int:product_id>/<string:action>', methods=['POST'])
-@login_required # Requires login to update quantity
+@login_required
 def update_quantity(product_id, action):
-    if 'cart' not in session:
-        session['cart'] = [] # Initialize if somehow not present
-    item_found = False
-    for item in session['cart']:
-        if item['id'] == product_id:
-            item_found = True
+    conn = connect_to_db()
+    if conn:
+        try:
+            cur = conn.cursor()
             if action == 'increase':
-                item['quantity'] += 1
-                flash(f"Quantity for {item['name']} increased.", "success")
+                cur.execute("""
+                    UPDATE cart SET quantity = quantity + 1
+                    WHERE user_id = %s AND product_id = %s
+                """, (current_user.id, product_id))
             elif action == 'decrease':
-                if item['quantity'] > 1:
-                    item['quantity'] -= 1
-                    flash(f"Quantity for {item['name']} decreased.", "info")
-                else:
-                    # If quantity is 1 and user clicks decrease, remove the item
-                    session['cart'] = [i for i in session['cart'] if i['id'] != product_id]
-                    flash(f"{item['name']} removed from cart.", "info")
-            session.modified = True
-            break
-    if not item_found:
-        flash("Product not found in cart.", "error")
+                cur.execute("""
+                    UPDATE cart SET quantity = quantity - 1
+                    WHERE user_id = %s AND product_id = %s AND quantity > 1
+                """, (current_user.id, product_id))
+                # If quantity goes below 1, delete item
+                cur.execute("""
+                    DELETE FROM cart WHERE user_id=%s AND product_id=%s AND quantity <= 0
+                """, (current_user.id, product_id))
+            conn.commit()
+        except Exception as e:
+            print(f"Error updating quantity: {e}")
+            flash("Error updating quantity.", "error")
+        finally:
+            conn.close()
     return redirect(url_for('cart'))
 
-
 @app.route('/cart')
-@login_required # Cart requires login
+@login_required
 def cart():
-    cart_items = session.get('cart', [])
-    total_price = sum(item['price'] * item['quantity'] for item in cart_items)
+    conn = connect_to_db()
+    cart_items = []
+    total_price = 0
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT c.product_id AS id, c.quantity, p.name, p.price, p.image_url
+                FROM cart c
+                JOIN products p ON c.product_id = p.id
+                WHERE c.user_id = %s
+            """, (current_user.id,))
+            cart_items = cur.fetchall()
+            total_price = sum(item['price'] * item['quantity'] for item in cart_items)
+        except Exception as e:
+            print(f"Error fetching cart: {e}")
+            flash("Error loading cart.", "error")
+        finally:
+            conn.close()
 
+    # Razorpay integration unchanged
     razorpay_order_id = None
     if total_price > 0:
         try:
-            order_data = {
-                "amount": int(total_price * 100),  # Razorpay expects amount in paise (integer)
-                "currency": "INR",
-                "payment_capture": 1
-            }
+            order_data = {"amount": int(total_price * 100), "currency": "INR", "payment_capture": 1}
             order = razorpay_client.order.create(order_data)
             razorpay_order_id = order['id']
         except Exception as e:
             print(f"Error creating Razorpay order: {e}")
-            flash("Error processing payment. Please try again.", "error")
+            flash("Error processing payment.", "error")
 
-    return render_template(
-        "cart.html",
+    return render_template("cart.html",
         cart_items=cart_items,
         total_price=total_price,
         razorpay_order_id=razorpay_order_id,
-        razorpay_key=RAZORPAY_KEY_ID # Use the key from config
+        razorpay_key=RAZORPAY_KEY_ID
     )
 
 @app.context_processor
 def inject_cart_count():
-    cart_items = session.get('cart', [])
-    total_quantity = sum(item['quantity'] for item in cart_items)
-    return dict(cart_count=total_quantity)
+    cart_count = 0
+    if current_user.is_authenticated:
+        conn = connect_to_db()
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT COALESCE(SUM(quantity), 0) FROM cart WHERE user_id = %s", (current_user.id,))
+                cart_count = cur.fetchone()[0]
+            except Exception as e:
+                print(f"Error fetching cart count: {e}")
+            finally:
+                conn.close()
+    return dict(cart_count=cart_count)
+
+
 
 @app.route('/payment/success', methods=['POST'])
-@login_required # Payment success route should be protected
+@login_required
 def payment_success():
     conn = None
     try:
-        # Request data will come as form data from Razorpay's direct form submission
         payment_id = request.form.get('razorpay_payment_id')
         order_id_from_razorpay = request.form.get('razorpay_order_id')
         signature = request.form.get('razorpay_signature')
 
-        # Verify the payment signature
-        params_dict = {
+        razorpay_client.utility.verify_payment_signature({
             'razorpay_order_id': order_id_from_razorpay,
             'razorpay_payment_id': payment_id,
             'razorpay_signature': signature
-        }
-        razorpay_client.utility.verify_payment_signature(params_dict)
-
-        # Payment is verified, proceed to save order details
-        user_id = current_user.id # Get user ID from Flask-Login
-        user_email = current_user.email # Get user email from Flask-Login
-        cart_items = session.get('cart', [])
-        total_amount = sum(item['price'] * item['quantity'] for item in cart_items)
+        })
 
         conn = connect_to_db()
-        cursor = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Insert into orders table
-        cursor.execute(
-            """
+        # Fetch cart from DB
+        cur.execute("""
+            SELECT c.product_id, c.quantity, p.name, p.price, p.image_url
+            FROM cart c
+            JOIN products p ON c.product_id = p.id
+            WHERE c.user_id = %s
+        """, (current_user.id,))
+        cart_items = cur.fetchall()
+        total_amount = sum(item['price'] * item['quantity'] for item in cart_items)
+
+        # Insert order
+        cur.execute("""
             INSERT INTO orders (user_id, user_email, razorpay_order_id, razorpay_payment_id, total_amount, status, order_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
-            """,
-            (user_id, user_email, order_id_from_razorpay, payment_id, total_amount, 'Completed', datetime.now())
-        )
-        new_order_db_id = cursor.fetchone()[0]
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (current_user.id, current_user.email, order_id_from_razorpay, payment_id, total_amount, 'Completed', datetime.now()))
+        new_order_id = cur.fetchone()['id']
 
-        # Insert into order_items table for each product in the cart
+        # Insert order items
         for item in cart_items:
-            cursor.execute(
-                """
+            cur.execute("""
                 INSERT INTO order_items (order_id, product_id, product_name, quantity, price_at_purchase, image_url)
-                VALUES (%s, %s, %s, %s, %s, %s);
-                """,
-                (new_order_db_id, item['id'], item['name'], item['quantity'], item['price'], item['image_url'])
-            )
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (new_order_id, item['product_id'], item['name'], item['quantity'], item['price'], item['image_url']))
+
+        # Clear cart in DB
+        cur.execute("DELETE FROM cart WHERE user_id=%s", (current_user.id,))
         conn.commit()
 
-        # Clear the user's cart from the session
-        session.pop('cart', None)
-        session.modified = True
-
-        flash("Payment successful! Your order has been placed and confirmed.", "success")
-        return redirect(url_for('thankyou')) # Redirect to the thankyou page
+        flash("Payment successful! Your order has been placed.", "success")
+        return redirect(url_for('thankyou'))
 
     except Exception as e:
         if conn:
             conn.rollback()
-        flash(f"Payment processing failed: {e}. Please try again or contact support.", "error")
-        print(f"Razorpay Payment Success Route Error: {e}")
-        return redirect(url_for('cart')) # Redirect back to cart with an error message
+        flash(f"Payment failed: {e}", "error")
+        return redirect(url_for('cart'))
     finally:
         if conn:
             conn.close()
+
 
 @app.route('/thankyou')
 def thankyou():
