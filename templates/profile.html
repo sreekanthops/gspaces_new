@@ -174,7 +174,9 @@
                                     <div class="order-items">
                                         {% for item in order.items() %}
                                             <div class="order-item">
-                                                <img src="{{ url_for('static', filename=item.image_url) if item.image_url else url_for('static', filename='img/placeholder.jpg') }}" alt="{{ item.product_name }}">
+                                                <p>Image URL: {{ url_for('static', filename=item.image_url) }}</p>
+                                                <img src="{{ url_for('static', filename=item.image_url) }}" alt="{{ item.product_name }}">
+                                                <p>{{ item.image_url }}</p>
                                                 <div>
                                                     {{ item.product_name }} (x{{ item.quantity }})<br>
                                                     <small>Price: ₹{{ item.price_at_purchase|inr }} each</small>
