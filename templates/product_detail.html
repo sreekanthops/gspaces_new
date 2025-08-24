@@ -145,6 +145,147 @@
                     <h2>Customer Reviews</h2>
 
                     <!-- Review Submission Form -->
+                    <div class="review-form-section mb-5">
+                        <h3>{% if user_review %}Edit Your Review{% else %}Write a Review{% endif %}</h3>
+                        {% if 'user' in session %}
+                        <form action="{{ url_for('product_detail', product_id=product.id) }}" method="post">
+                            <div class="mb-3">
+                                <label for="rating" class="form-label">Rating</label>
+                                <select class="form-select" id="rating" name="rating" required>
+                                    <option value="">Select a rating</option>
+                                    <option value="5" {% if user_review and user_review.rating == 5 %}selected{% endif %}>5 Stars - Excellent</option>
+                                    <option value="4" {% if user_review and user_review.rating == 4 %}selected{% endif %}>4 Stars - Very Good</option>
+                                    <option value="3" {% if user_review and user_review.rating == 3 %}selected{% endif %}>3 Stars - Good</option>
+                                    <option value="2" {% if user_review and user_review.rating == 2 %}selected{% endif %}>2 Stars - Fair</option>
+                                    <option value="1" {% if user_review and user_review.rating == 1 %}selected{% endif %}>1 Star - Poor</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="comment" class="form-label">Comment</label>
+                                <textarea class="form-control" id="comment" name="comment" rows="4" required>{{ user_review.comment if user_review }}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success">{% if user_review %}Update Review{% else %}Submit Review{% endif %}</button>
+                        </form>
+                        {% else %}
+                        <p>Please <a href="{{ url_for('login') }}">log in</a> to write a review.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Display Existing Reviews -->
+                    {% if reviews %}
+                        {% for review in reviews %}
+                            <div class="review-card">
+                                <div class="review-header">
+                                    <span class="review-author">{{ review.username }}</span>
+                                    <span class="review-date">{{ review.created_at }}</span>
+                                </div>
+                                <div class="rating-stars mb-2">
+                                    {% for i in range(review.rating) %}
+                                        &#9733;
+                                    {% endfor %}
+                                    {% for i in range(5 - review.rating) %}
+                                        &#9734;
+                                    {% endfor %}
+                                </div>
+                                <p class="review-comment">{{ review.comment }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No reviews yet. Be the first to review this product!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-center">Product details could not be loaded.</p>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+            font-weight: bold;
+            color: #333;
+        }
+        .review-card .review-date {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .review-card .review-comment {
+            color: #444;
+            line-height: 1.5;
+        }
+        .review-form-section {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 25px;
+            background-color: #f8f9fa;
+        }
+        /* Custom styles from snippet.txt might include: */
+        /* .section-title, .btn-primary, .container, etc. */
+        .custom-navbar { /* Ensure your navbar styles are consistent */
+             /* ... existing styles from your CSS ... */
+        }
+        .hero-section { /* If you reuse section styles */
+            /* ... */
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+
+    <div class="container product-detail-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert-container mb-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% if product %}
+        <div class="row">
+            <div class="col-md-6">
+                <img src="{{ url_for('static', filename=product.image_url) }}" alt="{{ product.name }}" class="product-image-large">
+            </div>
+            <div class="col-md-6 product-info">
+                <h1>{{ product.name }}</h1>
+                <p class="category text-muted">{{ product.category }}</p>
+                <div class="rating mb-3">
+                    {% if product.rating %}
+                        <span class="rating-stars">
+                            {% for i in range(product.rating|int) %}
+                                &#9733; <!-- Filled star -->
+                            {% endfor %}
+                            {% for i in range(5 - (product.rating|int)) %}
+                                &#9734; <!-- Empty star -->
+                            {% endfor %}
+                        </span>
+                        <span class="ms-2 text-muted">({{ product.rating }} out of 5)</span>
+                    {% else %}
+                        <span class="text-muted">No rating yet</span>
+                    {% endif %}
+                </div>
+                <p class="price">₹{{ product.price|inr }}</p>
+                <p class="description">{{ product.description }}</p>
+
+                <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="post" class="mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">Add to Cart</button>
+                </form>
+
+                <hr class="my-5">
+
+                <!-- Reviews Section -->
+                <div class="reviews-section">
+                    <h2>Customer Reviews</h2>
+
+                    <!-- Review Submission Form -->
                     <!-- Review Submission Form -->
                     <div class="review-form-section mb-5">
                         <h3>{% if user_review %}Edit Your Review{% else %}Write a Review{% endif %}</h3>
