@@ -340,13 +340,7 @@
         zoomResult.style.backgroundImage = "url('" + src + "')";
         zoomResult.style.backgroundRepeat = "no-repeat";
         zoomResult.style.backgroundPosition = "center";
-
-        // TEMP: rotate only when first thumbnail is selected
-        if (index === 0) {
-            mainImg.style.transform = "rotate(90deg)";
-        } else {
-            mainImg.style.transform = "rotate(0deg)";
-        }
+        mainImg.style.transform = "rotate(0deg)";
     }
 
     // Initialize first image for zoom background
