@@ -597,36 +597,35 @@ def index():
 
 # --- USER PROFILE ROUTES ---
 @app.route('/profile')
-@login_required # Protects this route, redirects to login if not authenticated
+@login_required
 def profile():
-    # current_user is provided by Flask-Login
+    # Obtain current user's ID and email via Flask-Login
     user_email = current_user.email
     user_id = current_user.id
-
+    # Default user details in case DB fields are null
     user_details = {
         'name': current_user.name,
         'email': user_email,
         'address': 'Not provided',
         'phone': 'Not provided'
     }
-    user_orders = [] # Initialize as empty list
-
+    user_orders = []
     conn = connect_to_db()
     if conn:
         try:
-            cursor = conn.cursor(cursor_factory=RealDictCursor) # Use RealDictCursor
-
-            # Fetch user details
-            cursor.execute("SELECT name, email, address, phone FROM users WHERE id = %s",
-                        (user_id,)) # Fetch by ID for consistency with load_user
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            # 1. Fetch user details
+            cursor.execute(
+                "SELECT name, email, address, phone FROM users WHERE id = %s",
+                (user_id,)
+            )
             rec = cursor.fetchone()
             if rec:
-                user_details['name'] = rec['name']
-                user_details['email'] = rec['email']
+                user_details['name']    = rec['name']
+                user_details['email']   = rec['email']
                 user_details['address'] = rec['address'] or 'Not provided'
-                user_details['phone'] = rec['phone'] or 'Not provided'
-
-            # Fetch user orders using a single query with JSON aggregation for items
+                user_details['phone']   = rec['phone']   or 'Not provided'
+            # 2. Fetch orders with JSON aggregation of items, using a new alias 'order_products'
             cursor.execute("""
                 SELECT
                     o.id,
@@ -634,42 +633,50 @@ def profile():
                     o.total_amount,
                     o.status,
                     o.order_date,
-                    json_agg(json_build_object(
-                        'product_id', oi.product_id,
-                        'product_name', oi.product_name,
-                        'quantity', oi.quantity,
-                        'price_at_purchase', oi.price_at_purchase,
-                        'image_url', oi.image_url
-                    )) AS items
-                FROM
-                    orders o
-                JOIN
-                    order_items oi ON o.id = oi.order_id
-                WHERE
-                    o.user_id = %s -- Use user_id from Flask-Login
+                    json_agg(
+                        json_build_object(
+                            'product_id',      oi.product_id,
+                            'product_name',    oi.product_name,
+                            'quantity',        oi.quantity,
+                            'price_at_purchase', oi.price_at_purchase,
+                            'image_url',       oi.image_url
+                        )
+                    ) AS order_products -- CHANGED ALIAS HERE from 'items' to 'order_products'
+                FROM orders o
+                JOIN order_items oi ON o.id = oi.order_id
+                WHERE o.user_id = %s
                 GROUP BY
                     o.id, o.razorpay_order_id, o.total_amount, o.status, o.order_date
-                ORDER BY
-                    o.order_date DESC;
-            """, (user_id,)) # Pass user_id
+                ORDER BY o.order_date DESC;
+            """, (user_id,))
             orders_data = cursor.fetchall()
-
+            # 3. Format each order’s date and collect into list
             for order_row in orders_data:
-                # Format date directly from the RealDictCursor result
                 order_row['order_date'] = order_row['order_date'].strftime('%Y-%m-%d %H:%M:%S')
-                user_orders.append(order_row) # Append the dict directly
-
+                
+                # IMPORTANT: Take the data from 'order_products' and assign it to 'items'
+                # This ensures the template still uses 'order.items' as expected.
+                if 'order_products' in order_row:
+                    order_row['items'] = order_row['order_products']
+                else:
+                    # Fallback in case 'order_products' is missing (shouldn't happen with correct SQL)
+                    order_row['items'] = [] 
+                    print(f"Warning: 'order_products' key missing in order_row: {order_row}")
+                user_orders.append(order_row)
         except Exception as e:
             print(f"Error fetching profile data or orders: {e}")
             flash("Error loading profile data or orders.", "error")
         finally:
-            if conn:
+            if conn: # Ensure conn exists before closing
                 conn.close()
+    # Render the profile page with gathered data
+    return render_template(
+        'profile.html',
+        user=user_details['name'],
+        user_details=user_details,
+        user_orders=user_orders
+    )
 
-    return render_template('profile.html',
-                           user=user_details['name'],
-                           user_details=user_details,
-                           user_orders=user_orders)
 
 @app.route('/update_profile', methods=['POST'])
 @login_required # Protect this route
