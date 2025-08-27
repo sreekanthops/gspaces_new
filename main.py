@@ -1,4 +1,5 @@
 import os
+import sys
 import random
 import string
 import psycopg2
@@ -8,7 +9,9 @@ from flask_login import login_required, current_user
 from flask import jsonify
 import smtplib
 import requests
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from flask import Flask, render_template_string
 # Flask imports
 from flask import (
     Flask, render_template, request, redirect, url_for, flash,
@@ -36,8 +39,7 @@ from itsdangerous import URLSafeTimedSerializer
 import razorpay
 # Datetime import
 from datetime import datetime
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+
 # --- CONFIGURATION ---
 # Read from environment variables if available; fallback to development defaults.
 # IMPORTANT: In production, NEVER hardcode sensitive information like this.
@@ -1008,31 +1010,111 @@ def add_to_cart(product_id):
 
     return redirect(url_for("cart"))
 
-@app.route("/send_order", methods=["POST"])
-@login_required   # ensures user must be logged in
-def send_order():
-    if not current_user.is_authenticated:
-        return jsonify({"message": "❌ User not logged in!"})
-
-    user_email = current_user.email   # comes from your User model
-    sender = "sri.chityala501@gmail.com"
-    subject = "Order Confirmation"
-    body = f"Hello {user_email},\n\nYour order has been placed successfully!"
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = user_email
-
+# ------------------ PAYMENT ROUTE ------------------ #
+@app.route("/send-test-email", methods=["POST"])
+def send_test_email():
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender, "zupd zixc vvzp kptk")
-            server.sendmail(sender, user_email, msg.as_string())
+        sender_email = "sri.chityala501@gmail.com"
+        receiver_email = "sri.chityala504@gmail.com"
+        password = "zupd zixc vvzp kptk"  # app password
 
-        return jsonify({"message": f"✅ Order confirmation sent to {user_email}"})
+        # Dummy values for testing
+        payment_id = "TEST12345"
+        total_amount = 4999
+
+        # Build sample HTML order (replace with real cart data if needed)
+        items_html = """
+        <tr>
+            <td><img src="https://via.placeholder.com/50" alt="Product" /></td>
+            <td>Sample Desk Setup</td>
+            <td>1</td>
+            <td>4999 INR</td>
+            <td>4999 INR</td>
+        </tr>
+        """
+
+        html_body = f"""
+        <html>
+        <body>
+            <h2>Thank you for your order, {current_user.email}!</h2>
+            <p>Your payment (<b>{payment_id}</b>) was successful. Here are your order details:</p>
+            <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+                <tr style="background-color:#f2f2f2;">
+                    <th>Image</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Subtotal</th>
+                </tr>
+                {items_html}
+            </table>
+            <h3>Total: {total_amount} INR</h3>
+            <p>We will process your order shortly. You can track your order on your GSpaces account.</p>
+            <br>
+            <p>Best Regards,<br>Team GSpaces</p>
+        </body>
+        </html>
+        """
+
+        # Create message
+        msg = MIMEMultipart("alternative")
+        msg["From"] = sender_email
+        msg["To"] = receiver_email
+        msg["Subject"] = "Test Order Confirmation - GSpaces"
+
+        # Attach HTML body
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        # Send email
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
+
+        return jsonify({"message": "✅ Test email sent successfully!"})
 
     except Exception as e:
-        return jsonify({"message": f"❌ Error: {str(e)}"})
+        return jsonify({"message": f"❌ Failed: {str(e)}"}), 500
+
+@app.route("/send_order", methods=["POST"])
+@login_required
+def send_order():
+    try:
+        # Example: getting cart/order data
+        data = request.json or {}
+        order_id = data.get("order_id", "N/A")
+        total_amount = data.get("amount", 0)
+
+        # Use plain text INR instead of ₹ symbol
+        message_body = f"""
+        Hello {current_user.name},
+
+        Your order has been placed successfully ✅
+        Order ID: {order_id}
+        Total Amount: INR {total_amount}
+
+        Thank you for shopping with us!
+        """
+
+        # ------------------ EMAIL ------------------ #
+        msg = MIMEMultipart()
+        msg["From"] = "no-reply@gspaces.in"
+        msg["To"] = current_user.email
+        msg["Subject"] = "Order Confirmation"
+
+        # Attach as plain ASCII text (safe encoding)
+        msg.attach(MIMEText(message_body, "plain", "utf-8"))
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASS"))
+            server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+
+        # ------------------ RESPONSE ------------------ #
+        return jsonify({"status": "success", "message": "Order email sent successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"status": "failed", "error": str(e)}), 500
+
     
 @app.route('/remove_from_cart/<int:product_id>', methods=['POST', 'GET'])
 @login_required
@@ -1138,7 +1220,6 @@ def inject_cart_count():
                 conn.close()
     return dict(cart_count=cart_count)
 
-
 @app.route('/payment/success', methods=['POST'])
 @login_required
 def payment_success():
@@ -1148,7 +1229,7 @@ def payment_success():
         order_id_from_razorpay = request.form.get('razorpay_order_id')
         signature = request.form.get('razorpay_signature')
 
-        # Verify signature from Razorpay
+        # ✅ Verify signature from Razorpay
         razorpay_client.utility.verify_payment_signature({
             'razorpay_order_id': order_id_from_razorpay,
             'razorpay_payment_id': payment_id,
@@ -1158,7 +1239,7 @@ def payment_success():
         conn = connect_to_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Fetch cart
+        # Fetch cart items
         cur.execute("""
             SELECT c.product_id, c.quantity, p.name, p.price, p.image_url
             FROM cart c
@@ -1189,7 +1270,7 @@ def payment_success():
         # -----------------------------
         # 📧 Build order confirmation email
         # -----------------------------
-        sender = "sri.chityala501@gmail.com"
+        sender = os.getenv("EMAIL_USER", "sri.chityala501@gmail.com")
         receiver = current_user.email
 
         msg = MIMEMultipart("alternative")
@@ -1204,8 +1285,8 @@ def payment_success():
                 <td><img src='{url_for('static', filename=item['image_url'], _external=True)}' width='50'></td>
                 <td>{item['name']}</td>
                 <td>{item['quantity']}</td>
-                <td>₹{item['price']}</td>
-                <td>₹{item['price'] * item['quantity']}</td>
+                <td>{item['price']} INR</td>
+                <td>{item['price'] * item['quantity']} INR</td>
             </tr>
             """
             for item in cart_items
@@ -1226,7 +1307,7 @@ def payment_success():
                 </tr>
                 {items_html}
             </table>
-            <h3>Total: ₹{total_amount}</h3>
+            <h3>Total: {total_amount} INR</h3>
             <p>We will process your order shortly. You can track your order on your GSpaces account.</p>
             <br>
             <p>Best Regards,<br>Team GSpaces</p>
@@ -1234,20 +1315,21 @@ def payment_success():
         </html>
         """
 
+        # Attach HTML with UTF-8 encoding
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        # Send email via Gmail
+        # Send email via Gmail SMTP
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender, "zupd zixc vvzp kptk")  # your app password
+            server.login(sender, os.getenv("EMAIL_PASS", "zupd zixc vvzp kptk"))
             server.sendmail(sender, receiver, msg.as_string())
 
-        flash("Payment successful! Your order has been placed. Confirmation email sent.", "success")
+        flash("✅ Payment successful! Your order has been placed. Confirmation email sent.", "success")
         return redirect(url_for('thankyou'))
 
     except Exception as e:
         if conn:
             conn.rollback()
-        flash(f"Payment failed: {e}", "error")
+        flash(f"❌ Payment failed: {e}", "error")
         return redirect(url_for('cart'))
     finally:
         if conn:
