@@ -172,10 +172,9 @@
                                         </span>
                                     </div>
                                     <div class="order-items">
-                                        {% for item in order.items %}
+                                        {% for item in order['items'] %}
                                             <div class="order-item">
-                                                <img src="{{ url_for('static', filename=item.image_url) if item.image_url else url_for('static', filename='img/placeholder.jpg') }}" alt="{{ item.product_name }}">
-                                                <div>
+                                                <img src="{{ url_for('static', filename=item.image_url if item.image_url else 'img/placeholder.jpg') }}" alt="{{ item.product_name }}">
                                                     {{ item.product_name }} (x{{ item.quantity }})<br>
                                                     <small>Price: INR {{ item.price_at_purchase }} each</small>
                                                 </div>
@@ -220,4 +219,5 @@
     </script>
 </body>
 </html>
+
 
