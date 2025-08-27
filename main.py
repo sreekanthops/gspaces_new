@@ -71,7 +71,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "226581903418-3ed1eqsl14qlou4nm
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "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")
 
 # Admin Emails (for simple admin check)
-ADMIN_EMAILS = {"sri.chityala501@gmail.com", "sreekanth.chityala@gspaces.com"} # Replace with actual admin emails
+ADMIN_EMAILS = {"sri.chityala501@gmail.com", "srichityala501@gmail.com", "sreekanth.chityala@gspaces.com"} # Replace with actual admin emails
 
 # Database Configuration
 DB_NAME = os.getenv("DB_NAME", "gspaces")
