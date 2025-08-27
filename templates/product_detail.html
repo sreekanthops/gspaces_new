@@ -10,7 +10,7 @@
     <!-- Your Custom CSS from snippet.txt -->
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
     <style>
-        /* Add specific styles for this page here based on snippet.txt and your design vision */
+        /* --- your existing styles --- */
         .product-detail-container {
             margin-top: 100px;
             padding-bottom: 50px;
@@ -81,13 +81,99 @@
             padding: 25px;
             background-color: #f8f9fa;
         }
-        /* Custom styles from snippet.txt might include: */
-        /* .section-title, .btn-primary, .container, etc. */
-        .custom-navbar { /* Ensure your navbar styles are consistent */
-             /* ... existing styles from your CSS ... */
+        .custom-navbar { /* keep your navbar styles if any */ }
+        .hero-section { /* keep if used elsewhere */ }
+
+        /* --- existing gallery styles --- */
+        .gs-main-wrap {
+            display: flex;
+            gap: 16px;
+            align-items: stretch;
+            margin-bottom: 12px;
+            flex-wrap: wrap; /* stack on small screens */
+            position: relative; /* NEW: so overlay lens positions correctly */
         }
-        .hero-section { /* If you reuse section styles */
-            /* ... */
+        .gs-main-image {
+            position: relative;
+            width: 420px;
+            max-width: 100%;
+            height: 420px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            cursor: crosshair; /* NEW: indicate zoom */
+        }
+        .gs-main-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+
+        /* UPDATED: .gs-zoom-result repurposed as an OVERLAY lens that follows the cursor */
+#zoomResult {
+  position: absolute;
+  left: 60%;   /* sits to the right of main image box */
+  top: 0;
+  width: 500px;   /* make bigger */
+  height: 420px;  /* make bigger */
+  border: 1px solid #ccc;
+  background-repeat: no-repeat;
+  display: none;
+  z-index: 10;
+}
+
+        .gs-thumb-row {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .gs-thumb-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 6px;
+            max-width: 100%;
+        }
+        .gs-thumb {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            flex: 0 0 auto;
+            background: #fff;
+        }
+        .gs-thumb.active {
+            border-color: #007bff;
+        }
+        .gs-thumb-nav {
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .gs-thumb-nav:active {
+            transform: scale(0.98);
+        }
+        .gs-thumb-nav[disabled] {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Responsive: disable overlay zoom on small screens */
+        @media (max-width: 992px) {
+            .gs-main-image { height: 360px; }
+            .gs-zoom-result { display: none !important; }
         }
     </style>
 </head>
@@ -111,8 +197,39 @@
         {% if product %}
         <div class="row">
             <div class="col-md-6">
-                <img src="{{ url_for('static', filename=product.image_url) }}" alt="{{ product.name }}" class="product-image-large">
+                <!-- === Main image + OVERLAY zoom lens (kept existing structure) === -->
+                <div class="gs-main-wrap">
+                    <div class="gs-main-image" id="mainImageBox">
+                        <img
+                            id="mainImg"
+                            src="{{ url_for('static', filename=product.image_url) }}"
+                            alt="{{ product.name }}"
+                        >
+                    </div>
+                    <!-- REPURPOSED: overlay lens that follows cursor (was side panel before) -->
+                    <div class="gs-zoom-result" id="zoomResult" aria-hidden="true"></div>
+                </div>
+
+                <!-- Thumbnails row with left/right scroll; duplicates use DB image -->
+                <div class="gs-thumb-row">
+                    <button class="gs-thumb-nav" id="thumbPrev" type="button" aria-label="Previous">&#10094;</button>
+                    <div class="gs-thumb-strip" id="thumbStrip">
+                        {% for i in range(6) %}
+                        <img
+                            class="gs-thumb {% if i == 0 %}active{% endif %}"
+                            src="{{ url_for('static', filename=product.image_url) }}"
+                            data-src="{{ url_for('static', filename=product.image_url) }}"
+                            data-index="{{ i }}"
+                            alt="Thumbnail {{ i + 1 }}"
+                        >
+                        {% endfor %}
+                    </div>
+                    <button class="gs-thumb-nav" id="thumbNext" type="button" aria-label="Next">&#10095;</button>
+                </div>
+
+                <!-- (Kept) If you still want the single large image style somewhere else, leave .product-image-large available -->
             </div>
+
             <div class="col-md-6 product-info">
                 <h1>{{ product.name }}</h1>
                 <p class="category text-muted">{{ product.category }}</p>
@@ -203,5 +320,124 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- JS for gallery + OVERLAY zoom + temp rotate -->
+<script>
+(function () {
+    const mainImg = document.getElementById('mainImg');
+    const mainBox = document.getElementById('mainImageBox');
+    const zoomResult = document.getElementById('zoomResult');
+    const wrap = mainBox ? mainBox.parentElement : null; // .gs-main-wrap
+    const strip = document.getElementById('thumbStrip');
+    const thumbs = strip ? strip.querySelectorAll('.gs-thumb') : [];
+    const prevBtn = document.getElementById('thumbPrev');
+    const nextBtn = document.getElementById('thumbNext');
+
+    // ===== Helper to set main image + zoom background
+    function setMain(src, index) {
+        if (!mainImg || !zoomResult) return;
+        mainImg.src = src;
+        zoomResult.style.backgroundImage = "url('" + src + "')";
+        zoomResult.style.backgroundRepeat = "no-repeat";
+        zoomResult.style.backgroundPosition = "center";
+
+        // TEMP: rotate only when first thumbnail is selected
+        if (index === 0) {
+            mainImg.style.transform = "rotate(90deg)";
+        } else {
+            mainImg.style.transform = "rotate(0deg)";
+        }
+    }
+
+    // Initialize first image for zoom background
+    if (mainImg && thumbs.length) {
+        setMain(thumbs[0].getAttribute('data-src'), 0);
+    }
+
+    // ===== Amazon-style SIDE zoom logic
+    let SCALE = 1.8; // lower magnification factor (less zoom)
+    let bgW = 0, bgH = 0;
+
+    function initZoom() {
+        if (!mainImg || !zoomResult) return;
+        const natW = mainImg.naturalWidth || mainImg.width;
+        const natH = mainImg.naturalHeight || mainImg.height;
+        bgW = natW * SCALE;
+        bgH = natH * SCALE;
+        zoomResult.style.backgroundImage = `url('${mainImg.src}')`;
+        zoomResult.style.backgroundSize = `${bgW}px ${bgH}px`;
+    }
+
+    function moveLens(e) {
+        if (!mainImg || !zoomResult || !wrap) return;
+        const imgRect = mainImg.getBoundingClientRect();
+
+        // Cursor position within image
+        let x = e.clientX - imgRect.left;
+        let y = e.clientY - imgRect.top;
+
+        // Clamp within image
+        x = Math.max(0, Math.min(x, imgRect.width));
+        y = Math.max(0, Math.min(y, imgRect.height));
+
+        // Background position for zoom
+        const scaleX = bgW / imgRect.width;
+        const scaleY = bgH / imgRect.height;
+        const bgX = -(x * scaleX - zoomResult.clientWidth / 2);
+        const bgY = -(y * scaleY - zoomResult.clientHeight / 2);
+        zoomResult.style.backgroundPosition = `${bgX}px ${bgY}px`;
+    }
+
+    if (mainImg && zoomResult && mainBox) {
+        mainBox.addEventListener('mouseenter', () => {
+            initZoom();
+            zoomResult.style.display = 'block';
+            zoomResult.setAttribute('aria-hidden', 'false');
+        });
+        mainBox.addEventListener('mousemove', moveLens);
+        mainBox.addEventListener('mouseleave', () => {
+            zoomResult.style.display = 'none';
+            zoomResult.setAttribute('aria-hidden', 'true');
+        });
+        window.addEventListener('resize', initZoom);
+        window.addEventListener('orientationchange', initZoom);
+    }
+
+    // ===== Thumbnails click
+    thumbs.forEach((thumb) => {
+        thumb.addEventListener('click', () => {
+            thumbs.forEach(t => t.classList.remove('active'));
+            thumb.classList.add('active');
+            const src = thumb.getAttribute('data-src');
+            const idx = parseInt(thumb.getAttribute('data-index'), 10) || 0;
+            setMain(src, idx);
+            initZoom();
+        });
+    });
+
+    // ===== Thumb strip scroll controls
+    function updateNavDisabled() {
+        if (!strip) return;
+        prevBtn.disabled = strip.scrollLeft <= 0;
+        const maxScroll = strip.scrollWidth - strip.clientWidth - 1;
+        nextBtn.disabled = strip.scrollLeft >= maxScroll;
+    }
+
+    const SCROLL_BY = 220;
+    if (prevBtn && nextBtn && strip) {
+        prevBtn.addEventListener('click', () => {
+            strip.scrollBy({ left: -SCROLL_BY, behavior: 'smooth' });
+            setTimeout(updateNavDisabled, 250);
+        });
+        nextBtn.addEventListener('click', () => {
+            strip.scrollBy({ left: SCROLL_BY, behavior: 'smooth' });
+            setTimeout(updateNavDisabled, 250);
+        });
+        strip.addEventListener('scroll', updateNavDisabled);
+        window.addEventListener('resize', updateNavDisabled);
+        updateNavDisabled();
+    }
+})();
+</script>
 </body>
 </html>
