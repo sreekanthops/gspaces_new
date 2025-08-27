@@ -1234,7 +1234,7 @@ def payment_success():
         </html>
         """
 
-        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         # Send email via Gmail
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
