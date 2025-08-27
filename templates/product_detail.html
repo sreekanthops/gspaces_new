@@ -2,436 +2,432 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ product.name }} - GSpaces</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Your Custom CSS from snippet.txt -->
-    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
-    <style>
-        /* --- your existing styles --- */
-        .product-detail-container {
-            margin-top: 100px;
-            padding-bottom: 50px;
-        }
-        .product-image-large {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .product-info h1 {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .product-info .price {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #007bff; /* Primary brand color */
-            margin-bottom: 20px;
-        }
-        .product-info .description {
-            font-size: 1.1rem;
-            line-height: 1.6;
-            color: #555;
-            margin-bottom: 30px;
-        }
-        .rating-stars {
-            color: #ffc107; /* Gold color for stars */
-            font-size: 1.2rem;
-        }
-        .rating-stars .bi-star-fill { /* Assuming you use Bootstrap Icons or similar */
-            margin-right: 2px;
-        }
-        .reviews-section {
-            margin-top: 50px;
-            border-top: 1px solid #eee;
-            padding-top: 30px;
-        }
-        .review-card {
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #fff;
-        }
-        .review-card .review-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .review-card .review-author {
-            font-weight: bold;
-            color: #333;
-        }
-        .review-card .review-date {
-            font-size: 0.85rem;
-            color: #888;
-        }
-        .review-card .review-comment {
-            color: #444;
-            line-height: 1.5;
-        }
-        .review-form-section {
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 25px;
-            background-color: #f8f9fa;
-        }
-        .custom-navbar { /* keep your navbar styles if any */ }
-        .hero-section { /* keep if used elsewhere */ }
-
-        /* --- existing gallery styles --- */
-        .gs-main-wrap {
-            display: flex;
-            gap: 16px;
-            align-items: stretch;
-            margin-bottom: 12px;
-            flex-wrap: wrap; /* stack on small screens */
-            position: relative; /* NEW: so overlay lens positions correctly */
-        }
-        .gs-main-image {
-            position: relative;
-            width: 420px;
-            max-width: 100%;
-            height: 420px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #fff;
-            cursor: crosshair; /* NEW: indicate zoom */
-        }
-        .gs-main-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            transition: transform 0.2s ease;
-        }
-
-        /* UPDATED: .gs-zoom-result repurposed as an OVERLAY lens that follows the cursor */
-#zoomResult {
-  position: absolute;
-  left: 60%;   /* sits to the right of main image box */
-  top: 0;
-  width: 500px;   /* make bigger */
-  height: 420px;  /* make bigger */
-  border: 1px solid #ccc;
-  background-repeat: no-repeat;
-  display: none;
-  z-index: 10;
-}
-
-        .gs-thumb-row {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .gs-thumb-strip {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            scroll-behavior: smooth;
-            padding-bottom: 6px;
-            max-width: 100%;
-        }
-        .gs-thumb {
-            width: 70px;
-            height: 70px;
-            object-fit: cover;
-            cursor: pointer;
-            border: 2px solid transparent;
-            border-radius: 6px;
-            flex: 0 0 auto;
-            background: #fff;
-        }
-        .gs-thumb.active {
-            border-color: #007bff;
-        }
-        .gs-thumb-nav {
-            border: none;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #f1f5f9;
-            display: grid;
-            place-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-        .gs-thumb-nav:active {
-            transform: scale(0.98);
-        }
-        .gs-thumb-nav[disabled] {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        /* Responsive: disable overlay zoom on small screens */
-        @media (max-width: 992px) {
-            .gs-main-image { height: 360px; }
-            .gs-zoom-result { display: none !important; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ product.name }} - GSpaces</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Bootstrap Icons for stars -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <!-- Your Custom CSS -->
+  <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet"/>
+  <style>
+    /* Overall container styling */
+    .product-detail-container {
+      margin-top: 90px;
+      padding-bottom: 60px;
+    }
+    /* Product image gallery styling */
+    .gs-main-wrap {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      position: relative;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .gs-main-image {
+      position: relative;
+      width: 460px;
+      max-width: 100%;
+      height: 460px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      cursor: crosshair;
+    }
+    .gs-main-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: transform 0.2s ease;
+    }
+    #zoomResult {
+      position: absolute;
+      left: 75%;
+      top: 0;
+      width: 520px;
+      height: 460px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-repeat: no-repeat;
+      display: none;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      background-color: #fff;
+    }
+    .gs-thumb-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .gs-thumb-strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      padding-bottom: 6px;
+      max-width: 100%;
+    }
+    .gs-thumb {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      flex: 0 0 auto;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+    .gs-thumb:hover {
+      border-color: #007bff;
+    }
+    .gs-thumb.active {
+      border-color: #007bff;
+    }
+    .gs-thumb-nav {
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      user-select: none;
+      font-size: 18px;
+    }
+    .gs-thumb-nav:active {
+      transform: scale(0.95);
+    }
+    .gs-thumb-nav[disabled] {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    /* Product info section */
+    .product-info h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #111;
+    }
+    .product-info .category {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: #666;
+    }
+    .rating-stars {
+      color: #ffa41c;
+      font-size: 1.2rem;
+    }
+    .rating-text {
+      font-size: 0.95rem;
+      color: #565959;
+    }
+    .product-info .price {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: #B12704;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    .product-info .description {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .btn-add-cart {
+      background-color: #ffa41c;
+      border-color: #ffa41c;
+      color: #111;
+      font-weight: 600;
+    }
+    .btn-add-cart:hover {
+      background-color: #f8981d;
+      border-color: #f8981d;
+      color: #111;
+    }
+    /* Review section */
+    .reviews-section {
+      margin-top: 50px;
+      border-top: 1px solid #ddd;
+      padding-top: 30px;
+    }
+    .reviews-section h2 {
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    .review-form-section {
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 20px;
+      background-color: #f8f9fa;
+      margin-bottom: 30px;
+    }
+    .review-form-section h3 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+    }
+    .review-card {
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .review-card .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .review-card .review-author {
+      font-weight: 600;
+      color: #111;
+    }
+    .review-card .review-date {
+      font-size: 0.85rem;
+      color: #777;
+    }
+    .review-card .review-comment {
+      color: #333;
+      line-height: 1.5;
+    }
+    @media (max-width: 992px) {
+      .gs-main-image { height: 360px; }
+      #zoomResult { display: none !important; }
+    }
+  </style>
 </head>
 <body>
-    {% include 'navbar.html' %}
+  {% include 'navbar.html' %}
 
-    <div class="container product-detail-container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="alert-container mb-3">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        {% if product %}
-        <div class="row">
-            <div class="col-md-6">
-                <!-- === Main image + OVERLAY zoom lens (kept existing structure) === -->
-                <div class="gs-main-wrap">
-                    <div class="gs-main-image" id="mainImageBox">
-                        <img
-                            id="mainImg"
-                            src="{{ url_for('static', filename=product.image_url) }}"
-                            alt="{{ product.name }}"
-                        >
-                    </div>
-                    <!-- REPURPOSED: overlay lens that follows cursor (was side panel before) -->
-                    <div class="gs-zoom-result" id="zoomResult" aria-hidden="true"></div>
-                </div>
-
-                <!-- Thumbnails row with left/right scroll; duplicates use DB image -->
-                <div class="gs-thumb-row">
-                    <button class="gs-thumb-nav" id="thumbPrev" type="button" aria-label="Previous">&#10094;</button>
-                    <div class="gs-thumb-strip" id="thumbStrip">
-                        {% for i in range(6) %}
-                        <img
-                            class="gs-thumb {% if i == 0 %}active{% endif %}"
-                            src="{{ url_for('static', filename=product.image_url) }}"
-                            data-src="{{ url_for('static', filename=product.image_url) }}"
-                            data-index="{{ i }}"
-                            alt="Thumbnail {{ i + 1 }}"
-                        >
-                        {% endfor %}
-                    </div>
-                    <button class="gs-thumb-nav" id="thumbNext" type="button" aria-label="Next">&#10095;</button>
-                </div>
-
-                <!-- (Kept) If you still want the single large image style somewhere else, leave .product-image-large available -->
+  <div class="container product-detail-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alert-container mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-
-            <div class="col-md-6 product-info">
-                <h1>{{ product.name }}</h1>
-                <p class="category text-muted">{{ product.category }}</p>
-                <div class="rating mb-3">
-                    {% if product.rating %}
-                        <span class="rating-stars">
-                            {% for i in range(product.rating|int) %}
-                                &#9733; <!-- Filled star -->
-                            {% endfor %}
-                            {% for i in range(5 - (product.rating|int)) %}
-                                &#9734; <!-- Empty star -->
-                            {% endfor %}
-                        </span>
-                        <span class="ms-2 text-muted">({{ product.rating }} out of 5)</span>
-                    {% else %}
-                        <span class="text-muted">No rating yet</span>
-                    {% endif %}
-                </div>
-                <p class="price">₹{{ product.price|inr }}</p>
-                <p class="description">{{ product.description }}</p>
-
-                <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="post" class="mt-4">
-                    <button type="submit" class="btn btn-primary btn-lg">Add to Cart</button>
-                </form>
-
-                <hr class="my-5">
-
-                <!-- Reviews Section -->
-                <div class="reviews-section">
-                    <h2>Customer Reviews</h2>
-
-                    <!-- Review Submission Form -->
-                    <div class="review-form-section mb-5">
-                        <h3>{% if user_review %}Edit Your Review{% else %}Write a Review{% endif %}</h3>
-                        {% if current_user.is_authenticated %}
-                        <form action="{{ url_for('product_detail', product_id=product.id) }}" method="post">
-                            <div class="mb-3">
-                                <label for="rating" class="form-label">Rating</label>
-                                <select class="form-select" id="rating" name="rating" required>
-                                    <option value="">Select a rating</option>
-                                    <option value="5" {% if user_review and user_review.rating == 5 %}selected{% endif %}>5 Stars - Excellent</option>
-                                    <option value="4" {% if user_review and user_review.rating == 4 %}selected{% endif %}>4 Stars - Very Good</option>
-                                    <option value="3" {% if user_review and user_review.rating == 3 %}selected{% endif %}>3 Stars - Good</option>
-                                    <option value="2" {% if user_review and user_review.rating == 2 %}selected{% endif %}>2 Stars - Fair</option>
-                                    <option value="1" {% if user_review and user_review.rating == 1 %}selected{% endif %}>1 Star - Poor</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="comment" class="form-label">Comment</label>
-                                <textarea class="form-control" id="comment" name="comment" rows="4" required>{{ user_review.comment if user_review }}</textarea>
-                            </div>
-                            <button type="submit" class="btn btn-success">{% if user_review %}Update Review{% else %}Submit Review{% endif %}</button>
-                        </form>
-                        {% else %}
-                        <p>Please <a href="{{ url_for('login') }}">log in</a> to write a review.</p>
-                        {% endif %}
-                    </div>
-
-                    <!-- Display Existing Reviews -->
-                    {% if reviews %}
-                        {% for review in reviews %}
-                            <div class="review-card">
-                                <div class="review-header">
-                                    <span class="review-author">{{ review.username }}</span>
-                                    <span class="review-date">{{ review.created_at }}</span>
-                                </div>
-                                <div class="rating-stars mb-2">
-                                    {% for i in range(review.rating) %}
-                                        &#9733;
-                                    {% endfor %}
-                                    {% for i in range(5 - review.rating) %}
-                                        &#9734;
-                                    {% endfor %}
-                                </div>
-                                <p class="review-comment">{{ review.comment }}</p>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p>No reviews yet. Be the first to review this product!</p>
-                    {% endif %}
-                </div>
-            </div>
+          {% endfor %}
         </div>
-        {% else %}
-        <p class="text-center">Product details could not be loaded.</p>
-        {% endif %}
+      {% endif %}
+    {% endwith %}
+
+    {% if product %}
+    <div class="row">
+      <!-- Left Column: Image Gallery -->
+      <div class="col-md-6">
+        <div class="gs-main-wrap">
+          <div class="gs-main-image" id="mainImageBox">
+            <img id="mainImg" src="{{ url_for('static', filename=product.image_url) }}" alt="{{ product.name }}">
+          </div>
+          <div id="zoomResult" aria-hidden="true"></div>
+        </div>
+        <div class="gs-thumb-row">
+          <button class="gs-thumb-nav" id="thumbPrev" type="button" aria-label="Previous">&#10094;</button>
+          <div class="gs-thumb-strip" id="thumbStrip">
+            {% for i in range(6) %}
+            <img
+              class="gs-thumb {% if i == 0 %}active{% endif %}"
+              src="{{ url_for('static', filename=product.image_url) }}"
+              data-src="{{ url_for('static', filename=product.image_url) }}"
+              data-index="{{ i }}"
+              alt="Thumbnail {{ i + 1 }}">
+            {% endfor %}
+          </div>
+          <button class="gs-thumb-nav" id="thumbNext" type="button" aria-label="Next">&#10095;</button>
+        </div>
+      </div>
+
+      <!-- Right Column: Product Info -->
+      <div class="col-md-6 product-info">
+        <h1>{{ product.name }}</h1>
+        <p class="category">{{ product.category }}</p>
+        <div class="rating mb-3">
+          {% if product.rating %}
+            <span class="rating-stars">
+              {% for i in range(product.rating|int) %}
+                <i class="bi bi-star-fill"></i>
+              {% endfor %}
+              {% for i in range(5 - (product.rating|int)) %}
+                <i class="bi bi-star"></i>
+              {% endfor %}
+            </span>
+            <span class="rating-text ms-2">({{ product.rating }} out of 5)</span>
+          {% else %}
+            <span class="rating-text">No rating yet</span>
+          {% endif %}
+        </div>
+        <p class="price">₹{{ product.price|inr }}</p>
+        <p class="description">{{ product.description }}</p>
+
+        <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="post" class="mt-3">
+          <button type="submit" class="btn btn-add-cart btn-lg w-100">Add to Cart</button>
+        </form>
+
+        <div class="reviews-section">
+          <h2>Customer Reviews</h2>
+          <div class="review-form-section">
+            <h3>{% if user_review %}Edit Your Review{% else %}Write a Review{% endif %}</h3>
+            {% if current_user.is_authenticated %}
+            <form action="{{ url_for('product_detail', product_id=product.id) }}" method="post">
+              <div class="mb-3">
+                <label for="rating" class="form-label">Rating</label>
+                <select class="form-select" id="rating" name="rating" required>
+                  <option value="">Select a rating</option>
+                  <option value="5" {% if user_review and user_review.rating == 5 %}selected{% endif %}>5 Stars - Excellent</option>
+                  <option value="4" {% if user_review and user_review.rating == 4 %}selected{% endif %}>4 Stars - Very Good</option>
+                  <option value="3" {% if user_review and user_review.rating == 3 %}selected{% endif %}>3 Stars - Good</option>
+                  <option value="2" {% if user_review and user_review.rating == 2 %}selected{% endif %}>2 Stars - Fair</option>
+                  <option value="1" {% if user_review and user_review.rating == 1 %}selected{% endif %}>1 Star - Poor</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="comment" class="form-label">Comment</label>
+                <textarea class="form-control" id="comment" name="comment" rows="4" required>{{ user_review.comment if user_review }}</textarea>
+              </div>
+              <button type="submit" class="btn btn-success">{% if user_review %}Update Review{% else %}Submit Review{% endif %}</button>
+            </form>
+            {% else %}
+            <p>Please <a href="{{ url_for('login') }}">log in</a> to write a review.</p>
+            {% endif %}
+          </div>
+
+          {% if reviews %}
+            {% for review in reviews %}
+              <div class="review-card">
+                <div class="review-header">
+                  <span class="review-author">{{ review.username }}</span>
+                  <span class="review-date">{{ review.created_at }}</span>
+                </div>
+                <div class="rating-stars mb-2">
+                  {% for i in range(review.rating) %}
+                    <i class="bi bi-star-fill"></i>
+                  {% endfor %}
+                  {% for i in range(5 - review.rating) %}
+                    <i class="bi bi-star"></i>
+                  {% endfor %}
+                </div>
+                <p class="review-comment">{{ review.comment }}</p>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p>No reviews yet. Be the first to review this product!</p>
+          {% endif %}
+        </div>
+      </div>
     </div>
+    {% else %}
+    <p class="text-center">Product details could not be loaded.</p>
+    {% endif %}
+  </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- JS for gallery + OVERLAY zoom + temp rotate -->
-<script>
-(function () {
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Gallery + Zoom JS -->
+  <script>
+  (function () {
     const mainImg = document.getElementById('mainImg');
     const mainBox = document.getElementById('mainImageBox');
     const zoomResult = document.getElementById('zoomResult');
-    const wrap = mainBox ? mainBox.parentElement : null; // .gs-main-wrap
+    const wrap = mainBox ? mainBox.parentElement : null;
     const strip = document.getElementById('thumbStrip');
     const thumbs = strip ? strip.querySelectorAll('.gs-thumb') : [];
     const prevBtn = document.getElementById('thumbPrev');
     const nextBtn = document.getElementById('thumbNext');
 
-    // ===== Helper to set main image + zoom background
     function setMain(src, index) {
-        if (!mainImg || !zoomResult) return;
-        mainImg.src = src;
-        zoomResult.style.backgroundImage = "url('" + src + "')";
-        zoomResult.style.backgroundRepeat = "no-repeat";
-        zoomResult.style.backgroundPosition = "center";
-        mainImg.style.transform = "rotate(0deg)";
+      if (!mainImg || !zoomResult) return;
+      mainImg.src = src;
+      zoomResult.style.backgroundImage = "url('" + src + "')";
+      zoomResult.style.backgroundRepeat = "no-repeat";
+      zoomResult.style.backgroundPosition = "center";
+      mainImg.style.transform = "rotate(0deg)";
     }
 
-    // Initialize first image for zoom background
     if (mainImg && thumbs.length) {
-        setMain(thumbs[0].getAttribute('data-src'), 0);
+      setMain(thumbs[0].getAttribute('data-src'), 0);
     }
 
-    // ===== Amazon-style SIDE zoom logic
-    let SCALE = 1.8; // lower magnification factor (less zoom)
+    let SCALE = 2.2;
     let bgW = 0, bgH = 0;
-
     function initZoom() {
-        if (!mainImg || !zoomResult) return;
-        const natW = mainImg.naturalWidth || mainImg.width;
-        const natH = mainImg.naturalHeight || mainImg.height;
-        bgW = natW * SCALE;
-        bgH = natH * SCALE;
-        zoomResult.style.backgroundImage = `url('${mainImg.src}')`;
-        zoomResult.style.backgroundSize = `${bgW}px ${bgH}px`;
+      if (!mainImg || !zoomResult) return;
+      const natW = mainImg.naturalWidth || mainImg.width;
+      const natH = mainImg.naturalHeight || mainImg.height;
+      bgW = natW * SCALE;
+      bgH = natH * SCALE;
+      zoomResult.style.backgroundImage = `url('${mainImg.src}')`;
+      zoomResult.style.backgroundSize = `${bgW}px ${bgH}px`;
     }
-
     function moveLens(e) {
-        if (!mainImg || !zoomResult || !wrap) return;
-        const imgRect = mainImg.getBoundingClientRect();
-
-        // Cursor position within image
-        let x = e.clientX - imgRect.left;
-        let y = e.clientY - imgRect.top;
-
-        // Clamp within image
-        x = Math.max(0, Math.min(x, imgRect.width));
-        y = Math.max(0, Math.min(y, imgRect.height));
-
-        // Background position for zoom
-        const scaleX = bgW / imgRect.width;
-        const scaleY = bgH / imgRect.height;
-        const bgX = -(x * scaleX - zoomResult.clientWidth / 2);
-        const bgY = -(y * scaleY - zoomResult.clientHeight / 2);
-        zoomResult.style.backgroundPosition = `${bgX}px ${bgY}px`;
+      if (!mainImg || !zoomResult || !wrap) return;
+      const imgRect = mainImg.getBoundingClientRect();
+      let x = e.clientX - imgRect.left;
+      let y = e.clientY - imgRect.top;
+      x = Math.max(0, Math.min(x, imgRect.width));
+      y = Math.max(0, Math.min(y, imgRect.height));
+      const scaleX = bgW / imgRect.width;
+      const scaleY = bgH / imgRect.height;
+      const bgX = -(x * scaleX - zoomResult.clientWidth / 2);
+      const bgY = -(y * scaleY - zoomResult.clientHeight / 2);
+      zoomResult.style.backgroundPosition = `${bgX}px ${bgY}px`;
     }
-
     if (mainImg && zoomResult && mainBox) {
-        mainBox.addEventListener('mouseenter', () => {
-            initZoom();
-            zoomResult.style.display = 'block';
-            zoomResult.setAttribute('aria-hidden', 'false');
-        });
-        mainBox.addEventListener('mousemove', moveLens);
-        mainBox.addEventListener('mouseleave', () => {
-            zoomResult.style.display = 'none';
-            zoomResult.setAttribute('aria-hidden', 'true');
-        });
-        window.addEventListener('resize', initZoom);
-        window.addEventListener('orientationchange', initZoom);
+      mainBox.addEventListener('mouseenter', () => {
+        initZoom();
+        zoomResult.style.display = 'block';
+        zoomResult.setAttribute('aria-hidden', 'false');
+      });
+      mainBox.addEventListener('mousemove', moveLens);
+      mainBox.addEventListener('mouseleave', () => {
+        zoomResult.style.display = 'none';
+        zoomResult.setAttribute('aria-hidden', 'true');
+      });
+      window.addEventListener('resize', initZoom);
+      window.addEventListener('orientationchange', initZoom);
     }
 
-    // ===== Thumbnails click
     thumbs.forEach((thumb) => {
-        thumb.addEventListener('click', () => {
-            thumbs.forEach(t => t.classList.remove('active'));
-            thumb.classList.add('active');
-            const src = thumb.getAttribute('data-src');
-            const idx = parseInt(thumb.getAttribute('data-index'), 10) || 0;
-            setMain(src, idx);
-            initZoom();
-        });
+      thumb.addEventListener('click', () => {
+        thumbs.forEach(t => t.classList.remove('active'));
+        thumb.classList.add('active');
+        const src = thumb.getAttribute('data-src');
+        setMain(src, 0);
+        initZoom();
+      });
     });
 
-    // ===== Thumb strip scroll controls
     function updateNavDisabled() {
-        if (!strip) return;
-        prevBtn.disabled = strip.scrollLeft <= 0;
-        const maxScroll = strip.scrollWidth - strip.clientWidth - 1;
-        nextBtn.disabled = strip.scrollLeft >= maxScroll;
+      if (!strip) return;
+      prevBtn.disabled = strip.scrollLeft <= 0;
+      const maxScroll = strip.scrollWidth - strip.clientWidth - 1;
+      nextBtn.disabled = strip.scrollLeft >= maxScroll;
     }
-
     const SCROLL_BY = 220;
     if (prevBtn && nextBtn && strip) {
-        prevBtn.addEventListener('click', () => {
-            strip.scrollBy({ left: -SCROLL_BY, behavior: 'smooth' });
-            setTimeout(updateNavDisabled, 250);
-        });
-        nextBtn.addEventListener('click', () => {
-            strip.scrollBy({ left: SCROLL_BY, behavior: 'smooth' });
-            setTimeout(updateNavDisabled, 250);
-        });
-        strip.addEventListener('scroll', updateNavDisabled);
-        window.addEventListener('resize', updateNavDisabled);
-        updateNavDisabled();
+      prevBtn.addEventListener('click', () => {
+        strip.scrollBy({ left: -SCROLL_BY, behavior: 'smooth' });
+        setTimeout(updateNavDisabled, 250);
+      });
+      nextBtn.addEventListener('click', () => {
+        strip.scrollBy({ left: SCROLL_BY, behavior: 'smooth' });
+        setTimeout(updateNavDisabled, 250);
+      });
+      strip.addEventListener('scroll', updateNavDisabled);
+      window.addEventListener('resize', updateNavDisabled);
+      updateNavDisabled();
     }
-})();
-</script>
+  })();
+  </script>
 </body>
 </html>
