@@ -74,6 +74,7 @@
                                 <p class="mb-1">Price: ₹{{ item.price|inr }}</p>
                                 <p class="mb-0">Quantity: {{ item.quantity }}</p>
                             </div>
+                            <button id="sendBtn" class="btn btn-primary">Send</button>
                             <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="btn btn-sm btn-outline-danger">Remove</a>
                         </div>
                     {% endfor %}
@@ -164,6 +165,28 @@
         rzp1.open();
         e.preventDefault();
     }
+
+    document.getElementById("sendBtn").addEventListener("click", function() {
+        fetch("/send_order", {
+        method: "POST",
+        credentials: "same-origin",            // <–– send the session cookie
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            // If you’re using Flask-WTF CSRF:
+            //"X-CSRFToken": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        // If you need to send a body (e.g. cart data), JSON-stringify it here:
+        // body: JSON.stringify({ /* ... */ })
+        })
+        .then(response => response.json())
+        .then(data => {
+        alert(data.message);
+        })
+        .catch(err => {
+        alert("Error: " + err);
+        });
+    });
 </script>
 
 </body>

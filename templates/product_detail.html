@@ -147,7 +147,7 @@
                     <!-- Review Submission Form -->
                     <div class="review-form-section mb-5">
                         <h3>{% if user_review %}Edit Your Review{% else %}Write a Review{% endif %}</h3>
-                        {% if 'user' in session %}
+                        {% if current_user.is_authenticated %}
                         <form action="{{ url_for('product_detail', product_id=product.id) }}" method="post">
                             <div class="mb-3">
                                 <label for="rating" class="form-label">Rating</label>
